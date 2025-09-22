@@ -1,8 +1,4 @@
-import type {
-  IDataObject,
-  IExecuteFunctions,
-  INodeProperties,
-} from 'n8n-workflow';
+import type { IDataObject, IExecuteFunctions, INodeProperties } from 'n8n-workflow';
 import { NodeApiError, NodeOperationError, jsonParse } from 'n8n-workflow';
 
 import { BaseTypesenseResource } from './BaseTypesenseResource';
@@ -590,7 +586,7 @@ export class SearchResource extends BaseTypesenseResource {
   async execute(
     operation: string,
     context: IExecuteFunctions,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject | IDataObject[]> {
     const client = await getTypesenseClient.call(context);
 
@@ -618,7 +614,7 @@ export class SearchResource extends BaseTypesenseResource {
           throw new NodeOperationError(
             context.getNode(),
             `The operation "${operation}" is not supported for ${this.resourceName}.`,
-            { itemIndex }
+            { itemIndex },
           );
       }
     } catch (error) {
@@ -632,7 +628,7 @@ export class SearchResource extends BaseTypesenseResource {
   private async performSearch(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject[]> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const query = this.validateRequired(context, 'query', itemIndex);
@@ -646,13 +642,13 @@ export class SearchResource extends BaseTypesenseResource {
   private async performMultiSearch(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject[]> {
     const collections = this.validateRequired(context, 'collections', itemIndex);
     const query = this.validateRequired(context, 'query', itemIndex);
 
     // Build multiple search requests
-    const searchRequests = collections.split(',').map(collectionName => {
+    const searchRequests = collections.split(',').map((collectionName) => {
       const searchParams = this.buildSearchParameters(context, itemIndex);
       return {
         collection: collectionName.trim(),
@@ -668,7 +664,7 @@ export class SearchResource extends BaseTypesenseResource {
   private async performSearchWithConversation(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject[]> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const query = this.validateRequired(context, 'query', itemIndex);
@@ -684,10 +680,7 @@ export class SearchResource extends BaseTypesenseResource {
     return [response as IDataObject];
   }
 
-  private buildSearchParameters(
-    context: IExecuteFunctions,
-    itemIndex: number
-  ): IDataObject {
+  private buildSearchParameters(context: IExecuteFunctions, itemIndex: number): IDataObject {
     const params: IDataObject = {};
 
     // Basic search parameters
@@ -808,7 +801,7 @@ export class SearchResource extends BaseTypesenseResource {
   private async performVectorSearch(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject[]> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const vectorQuery = this.validateRequired(context, 'vectorQuery', itemIndex);
@@ -821,7 +814,7 @@ export class SearchResource extends BaseTypesenseResource {
       throw new NodeOperationError(
         context.getNode(),
         'Vector query must be comma-separated numbers.',
-        { itemIndex }
+        { itemIndex },
       );
     }
 
@@ -841,12 +834,17 @@ export class SearchResource extends BaseTypesenseResource {
   private async performSemanticSearch(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject[]> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const semanticQuery = this.validateRequired(context, 'semanticQuery', itemIndex);
     const vectorField = this.getOptional(context, 'vectorField', itemIndex, 'embedding');
-    const modelName = this.getOptional(context, 'modelName', itemIndex, 'openai/text-embedding-ada-002');
+    const modelName = this.getOptional(
+      context,
+      'modelName',
+      itemIndex,
+      'openai/text-embedding-ada-002',
+    );
 
     const searchParams: IDataObject = {
       q: semanticQuery,
@@ -864,7 +862,7 @@ export class SearchResource extends BaseTypesenseResource {
   private async performAdvancedSearch(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject[]> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const query = this.validateRequired(context, 'query', itemIndex);

@@ -1,8 +1,4 @@
-import type {
-  IDataObject,
-  IExecuteFunctions,
-  INodeProperties,
-} from 'n8n-workflow';
+import type { IDataObject, IExecuteFunctions, INodeProperties } from 'n8n-workflow';
 import { NodeApiError, NodeOperationError, jsonParse } from 'n8n-workflow';
 import type { CollectionCreateSchema } from 'typesense/lib/Typesense/Collections';
 import type { CollectionUpdateSchema } from 'typesense/lib/Typesense/Collection';
@@ -478,7 +474,7 @@ export class CollectionResource extends BaseTypesenseResource {
   async execute(
     operation: string,
     context: IExecuteFunctions,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject | IDataObject[]> {
     const client = await getTypesenseClient.call(context);
 
@@ -503,7 +499,7 @@ export class CollectionResource extends BaseTypesenseResource {
           throw new NodeOperationError(
             context.getNode(),
             `The operation "${operation}" is not supported for ${this.resourceName}.`,
-            { itemIndex }
+            { itemIndex },
           );
       }
     } catch (error) {
@@ -517,7 +513,7 @@ export class CollectionResource extends BaseTypesenseResource {
   private async createCollection(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const useJson = this.getBoolean(context, 'jsonParameters', itemIndex);
     let schemaPayload: CollectionCreateSchema;
@@ -529,17 +525,13 @@ export class CollectionResource extends BaseTypesenseResource {
         throw new NodeOperationError(
           context.getNode(),
           'Schema JSON must include both "name" and "fields" properties.',
-          { itemIndex }
+          { itemIndex },
         );
       }
     } else {
       const schemaParameters = this.getObject(context, 'schemaParameters', itemIndex);
       const additionalFields = this.getObject(context, 'additionalFields', itemIndex);
-      schemaPayload = buildCollectionCreateSchema.call(
-        context,
-        schemaParameters,
-        additionalFields
-      );
+      schemaPayload = buildCollectionCreateSchema.call(context, schemaParameters, additionalFields);
     }
 
     const response = await client.collections().create(schemaPayload);
@@ -549,7 +541,7 @@ export class CollectionResource extends BaseTypesenseResource {
   private async deleteCollection(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const collectionId = this.validateRequired(context, 'collectionId', itemIndex);
     const response = await client.collections(collectionId).delete();
@@ -559,7 +551,7 @@ export class CollectionResource extends BaseTypesenseResource {
   private async getCollection(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const collectionId = this.validateRequired(context, 'collectionId', itemIndex);
     const response = await client.collections(collectionId).retrieve();
@@ -569,33 +561,51 @@ export class CollectionResource extends BaseTypesenseResource {
   private async getAllCollections(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject[]> {
     const returnAll = this.getBoolean(context, 'returnAll', itemIndex, true);
-    const allCollections = (await client
-      .collections()
-      .retrieve()) as unknown as IDataObject[];
+
+    // Build query parameters for the API call
+    const queryParams: any = {};
+
+    const excludeFields = this.getOptional(context, 'excludeFields', itemIndex);
+    if (excludeFields) {
+      queryParams.exclude_fields = excludeFields;
+    }
+
+    if (!returnAll) {
+      const limit = this.getNumber(context, 'limit', itemIndex, 50);
+      queryParams.limit = limit;
+
+      const offset = this.getNumber(context, 'offset', itemIndex, 0);
+      if (offset > 0) {
+        queryParams.offset = offset;
+      }
+    }
+
+    // Call API with query parameters if any are specified
+    let allCollections: IDataObject[];
+    if (Object.keys(queryParams).length > 0) {
+      allCollections = (await client.collections().retrieve(queryParams)) as unknown as IDataObject[];
+    } else {
+      allCollections = (await client.collections().retrieve()) as unknown as IDataObject[];
+    }
 
     if (!Array.isArray(allCollections)) {
       throw new NodeOperationError(
         context.getNode(),
         'Unexpected response received from Typesense.',
-        { itemIndex }
+        { itemIndex },
       );
     }
 
-    if (returnAll) {
-      return allCollections;
-    }
-
-    const limit = this.getNumber(context, 'limit', itemIndex, 50);
-    return allCollections.slice(0, limit);
+    return allCollections;
   }
 
   private async updateCollection(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const collectionId = this.validateRequired(context, 'collectionId', itemIndex);
     const useJson = this.getBoolean(context, 'jsonParameters', itemIndex);
@@ -607,18 +617,14 @@ export class CollectionResource extends BaseTypesenseResource {
     } else {
       const schemaParameters = this.getObject(context, 'updateSchemaParameters', itemIndex);
       const additionalFields = this.getObject(context, 'updateAdditionalFields', itemIndex);
-      updatePayload = buildCollectionUpdateSchema.call(
-        context,
-        schemaParameters,
-        additionalFields
-      );
+      updatePayload = buildCollectionUpdateSchema.call(context, schemaParameters, additionalFields);
     }
 
     if (Object.keys(updatePayload).length === 0) {
       throw new NodeOperationError(
         context.getNode(),
         'Please provide at least one field to update.',
-        { itemIndex }
+        { itemIndex },
       );
     }
 

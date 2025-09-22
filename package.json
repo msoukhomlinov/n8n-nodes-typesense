@@ -20,28 +20,28 @@
   ],
   "scripts": {
     "build": "tsc && npm run copy:assets",
-    "lint": "cross-env ESLINT_USE_FLAT_CONFIG=false eslint . --ext .ts",
+    "lint": "eslint .",
     "format": "prettier --write .",
     "copy:assets": "copyfiles \"nodes/**/*.svg\" dist",
     "prepare": "npm run build",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "n8n-core": "^1.14.1",
-    "n8n-workflow": "^1.82.0",
-    "tslib": "^2.7.0",
+    "n8n-core": "^1.107.4",
+    "n8n-workflow": "^1.107.4",
+    "tslib": "^2.8.1",
     "typesense": "^2.1.0"
   },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^8.7.0",
-    "@typescript-eslint/parser": "^8.7.0",
+    "@typescript-eslint/eslint-plugin": "^8.44.0",
+    "@typescript-eslint/parser": "^8.44.0",
     "eslint": "^9.9.0",
-    "eslint-config-prettier": "^9.1.0",
+    "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-n8n-nodes-base": "^1.6.0",
     "eslint-plugin-prettier": "^5.2.1",
-    "cross-env": "^7.0.3",
+    "cross-env": "^10.0.0",
     "copyfiles": "^2.4.1",
-    "prettier": "^3.3.3",
+    "prettier": "^3.6.2",
     "typescript": "^5.5.4"
   }
 }

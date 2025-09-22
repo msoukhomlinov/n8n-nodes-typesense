@@ -2,6 +2,7 @@ import type { INodeProperties } from 'n8n-workflow';
 
 const fieldTypeOptions = [
   { name: 'String', value: 'string' },
+  { name: 'String (Auto-facet)', value: 'string*' },
   { name: 'Int 32', value: 'int32' },
   { name: 'Int 64', value: 'int64' },
   { name: 'Float', value: 'float' },
@@ -12,6 +13,8 @@ const fieldTypeOptions = [
   { name: 'Float Array', value: 'float[]' },
   { name: 'Bool Array', value: 'bool[]' },
   { name: 'Object', value: 'object' },
+  { name: 'Auto', value: 'auto' },
+  { name: 'Image', value: 'image' },
 ];
 
 export const collectionOperations: INodeProperties[] = [
@@ -125,7 +128,7 @@ export const collectionFields: INodeProperties[] = [
         name: 'name',
         type: 'string',
         default: '',
-        required: true,
+        required: false,
       },
       {
         displayName: 'Enable Nested Fields',
@@ -152,7 +155,7 @@ export const collectionFields: INodeProperties[] = [
                 name: 'name',
                 type: 'string',
                 default: '',
-                required: true,
+                required: false,
               },
               {
                 displayName: 'Type',
@@ -214,6 +217,59 @@ export const collectionFields: INodeProperties[] = [
                 },
                 description: 'Number of dimensions for vector fields',
               },
+              {
+                displayName: 'Reference',
+                name: 'reference',
+                type: 'string',
+                default: '',
+                description: 'Name of a field in another collection for joins',
+              },
+              {
+                displayName: 'Drop',
+                name: 'drop',
+                type: 'boolean',
+                default: false,
+                description: 'Drop this field from indexing',
+              },
+              {
+                displayName: 'Store',
+                name: 'store',
+                type: 'boolean',
+                default: true,
+                description: 'Store field value on disk',
+              },
+              {
+                displayName: 'Vector Distance',
+                name: 'vecDist',
+                type: 'options',
+                options: [
+                  { name: 'Cosine', value: 'cosine' },
+                  { name: 'Inner Product', value: 'ip' },
+                ],
+                default: 'cosine',
+                description: 'Distance metric for vector search',
+              },
+              {
+                displayName: 'Range Index',
+                name: 'rangeIndex',
+                type: 'boolean',
+                default: false,
+                description: 'Enable range filtering optimization',
+              },
+              {
+                displayName: 'Stem',
+                name: 'stem',
+                type: 'boolean',
+                default: false,
+                description: 'Enable stemming for this field',
+              },
+              {
+                displayName: 'Stem Dictionary',
+                name: 'stemDictionary',
+                type: 'string',
+                default: '',
+                description: 'Name of stemming dictionary to use',
+              },
             ],
           },
         ],
@@ -255,16 +311,33 @@ export const collectionFields: INodeProperties[] = [
         default: '',
         description: 'Comma-separated list of symbols to include in the index',
       },
-      {
-        displayName: 'Metadata (JSON)',
-        name: 'metadataJson',
-        type: 'string',
-        typeOptions: {
-          rows: 3,
+        {
+          displayName: 'Metadata (JSON)',
+          name: 'metadataJson',
+          type: 'string',
+          typeOptions: {
+            rows: 3,
+          },
+          default: '',
+          description: 'Optional metadata to store with the collection schema',
         },
-        default: '',
-        description: 'Optional metadata to store with the collection schema',
-      },
+        {
+          displayName: 'Synonym Sets',
+          name: 'synonymSets',
+          type: 'string',
+          default: '',
+          description: 'Comma-separated list of synonym set names to associate with this collection',
+        },
+        {
+          displayName: 'Voice Query Model (JSON)',
+          name: 'voiceQueryModelJson',
+          type: 'string',
+          typeOptions: {
+            rows: 4,
+          },
+          default: '',
+          description: 'Voice query model configuration as JSON',
+        },
     ],
   },
   {
@@ -439,5 +512,34 @@ export const collectionFields: INodeProperties[] = [
       },
     },
     description: 'Maximum number of collections to retrieve',
+  },
+  {
+    displayName: 'Exclude Fields',
+    name: 'excludeFields',
+    type: 'string',
+    default: '',
+    displayOptions: {
+      show: {
+        resource: ['collection'],
+        operation: ['getAll'],
+      },
+    },
+    description: 'Comma-separated list of fields to exclude from the response',
+  },
+  {
+    displayName: 'Offset',
+    name: 'offset',
+    type: 'number',
+    default: 0,
+    typeOptions: {
+      minValue: 0,
+    },
+    displayOptions: {
+      show: {
+        resource: ['collection'],
+        operation: ['getAll'],
+      },
+    },
+    description: 'Starting point for pagination',
   },
 ];

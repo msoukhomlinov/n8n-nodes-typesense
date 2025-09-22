@@ -1,8 +1,4 @@
-import type {
-  IDataObject,
-  IExecuteFunctions,
-  INodeProperties,
-} from 'n8n-workflow';
+import type { IDataObject, IExecuteFunctions, INodeProperties } from 'n8n-workflow';
 import { NodeApiError, NodeOperationError, jsonParse } from 'n8n-workflow';
 
 import { BaseTypesenseResource } from './BaseTypesenseResource';
@@ -361,7 +357,7 @@ export class DocumentResource extends BaseTypesenseResource {
   async execute(
     operation: string,
     context: IExecuteFunctions,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject | IDataObject[]> {
     const client = await getTypesenseClient.call(context);
 
@@ -392,7 +388,7 @@ export class DocumentResource extends BaseTypesenseResource {
           throw new NodeOperationError(
             context.getNode(),
             `The operation "${operation}" is not supported for ${this.resourceName}.`,
-            { itemIndex }
+            { itemIndex },
           );
       }
     } catch (error) {
@@ -406,7 +402,7 @@ export class DocumentResource extends BaseTypesenseResource {
   private async createDocument(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const document = await this.buildDocumentData(context, itemIndex);
@@ -418,7 +414,7 @@ export class DocumentResource extends BaseTypesenseResource {
   private async deleteDocument(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const documentId = this.validateRequired(context, 'documentId', itemIndex);
@@ -430,7 +426,7 @@ export class DocumentResource extends BaseTypesenseResource {
   private async getDocument(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const documentId = this.validateRequired(context, 'documentId', itemIndex);
@@ -442,7 +438,7 @@ export class DocumentResource extends BaseTypesenseResource {
   private async getAllDocuments(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject[]> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const returnAll = this.getBoolean(context, 'returnAll', itemIndex, true);
@@ -480,7 +476,7 @@ export class DocumentResource extends BaseTypesenseResource {
   private async updateDocument(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const documentId = this.validateRequired(context, 'documentId', itemIndex);
@@ -493,7 +489,7 @@ export class DocumentResource extends BaseTypesenseResource {
   private async searchDocuments(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject[]> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const query = this.validateRequired(context, 'query', itemIndex);
@@ -548,20 +544,23 @@ export class DocumentResource extends BaseTypesenseResource {
   private async deleteByQuery(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const query = this.validateRequired(context, 'query', itemIndex);
 
     const filterBy = this.getOptional(context, 'filterBy', itemIndex);
 
-    const response = await client.collections(collection).documents().delete({ filter_by: filterBy, q: query });
+    const response = await client
+      .collections(collection)
+      .documents()
+      .delete({ filter_by: filterBy, q: query });
     return response as IDataObject;
   }
 
   private async buildDocumentData(
     context: IExecuteFunctions,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const useJson = this.getBoolean(context, 'jsonInput', itemIndex);
 

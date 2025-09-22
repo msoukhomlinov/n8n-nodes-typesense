@@ -1,4 +1,8 @@
-import type { ICredentialType, INodeProperties } from 'n8n-workflow';
+import type {
+  ICredentialTestRequest,
+  ICredentialType,
+  INodeProperties,
+} from 'n8n-workflow';
 
 export class TypesenseApi implements ICredentialType {
   name = 'typesenseApi';
@@ -15,6 +19,16 @@ export class TypesenseApi implements ICredentialType {
       typeOptions: { password: true },
       default: '',
       required: true,
+      description: 'Your Typesense API key for authentication',
+    },
+    {
+      displayName: 'Host',
+      name: 'host',
+      type: 'string',
+      default: '',
+      placeholder: 'localhost',
+      required: true,
+      description: 'Typesense server hostname (e.g., localhost, typesense.example.com). Do not include protocol (http://) or port (:8108).',
     },
     {
       displayName: 'Protocol',
@@ -31,14 +45,7 @@ export class TypesenseApi implements ICredentialType {
         },
       ],
       default: 'https',
-    },
-    {
-      displayName: 'Host',
-      name: 'host',
-      type: 'string',
-      default: '',
-      placeholder: 'a1xyz.us-east-1.typesense.net',
-      required: true,
+      description: 'Protocol to use for connection',
     },
     {
       displayName: 'Port',
@@ -49,7 +56,7 @@ export class TypesenseApi implements ICredentialType {
         minValue: 1,
         maxValue: 65535,
       },
-      description: 'Defaults to 443 for HTTPS and 8108 for HTTP',
+      description: 'Port number (443 for HTTPS, 8108 for HTTP)',
     },
     {
       displayName: 'Connection Timeout (seconds)',
@@ -60,14 +67,15 @@ export class TypesenseApi implements ICredentialType {
         minValue: 1,
         maxValue: 60,
       },
-      description: 'Time before an API request is aborted',
+      description: 'Maximum time to wait for API requests',
     },
   ];
 
-  test = {
+  test: ICredentialTestRequest = {
     request: {
-      method: 'GET' as const,
-      url: '={{$self["protocol"]}}://{{$self["host"]}}:{{$self["port"]}}/health',
+      baseURL: '={{$credentials.protocol}}://{{$credentials.host}}:{{$credentials.port}}',
+      url: '/health',
+      method: 'GET',
     },
   };
 }

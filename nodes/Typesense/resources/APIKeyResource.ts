@@ -1,8 +1,4 @@
-import type {
-  IDataObject,
-  IExecuteFunctions,
-  INodeProperties,
-} from 'n8n-workflow';
+import type { IDataObject, IExecuteFunctions, INodeProperties } from 'n8n-workflow';
 import { NodeApiError, NodeOperationError, jsonParse } from 'n8n-workflow';
 
 import { BaseTypesenseResource } from './BaseTypesenseResource';
@@ -160,7 +156,8 @@ export class APIKeyResource extends BaseTypesenseResource {
             jsonInput: [false],
           },
         },
-        description: 'Comma-separated list of collection names the API key can access (leave empty for all)',
+        description:
+          'Comma-separated list of collection names the API key can access (leave empty for all)',
       },
       {
         displayName: 'Expires At',
@@ -245,7 +242,7 @@ export class APIKeyResource extends BaseTypesenseResource {
   async execute(
     operation: string,
     context: IExecuteFunctions,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject | IDataObject[]> {
     const client = await getTypesenseClient.call(context);
 
@@ -270,7 +267,7 @@ export class APIKeyResource extends BaseTypesenseResource {
           throw new NodeOperationError(
             context.getNode(),
             `The operation "${operation}" is not supported for ${this.resourceName}.`,
-            { itemIndex }
+            { itemIndex },
           );
       }
     } catch (error) {
@@ -284,7 +281,7 @@ export class APIKeyResource extends BaseTypesenseResource {
   private async createAPIKey(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const useJson = this.getBoolean(context, 'jsonInput', itemIndex);
     let apiKeyConfig: IDataObject;
@@ -298,7 +295,7 @@ export class APIKeyResource extends BaseTypesenseResource {
         throw new NodeOperationError(
           context.getNode(),
           'API key JSON must include "description" and "actions" properties.',
-          { itemIndex }
+          { itemIndex },
         );
       }
     } else {
@@ -324,11 +321,9 @@ export class APIKeyResource extends BaseTypesenseResource {
           const metadata = jsonParse<IDataObject>(metadataJson);
           apiKeyConfig.metadata = metadata;
         } catch (error) {
-          throw new NodeOperationError(
-            context.getNode(),
-            'Metadata JSON must be valid JSON.',
-            { itemIndex }
-          );
+          throw new NodeOperationError(context.getNode(), 'Metadata JSON must be valid JSON.', {
+            itemIndex,
+          });
         }
       }
     }
@@ -340,7 +335,7 @@ export class APIKeyResource extends BaseTypesenseResource {
   private async deleteAPIKey(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const apiKeyId = this.validateRequired(context, 'apiKeyId', itemIndex);
     const response = await client.keys(apiKeyId).delete();
@@ -350,7 +345,7 @@ export class APIKeyResource extends BaseTypesenseResource {
   private async getAPIKey(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const apiKeyId = this.validateRequired(context, 'apiKeyId', itemIndex);
     const response = await client.keys(apiKeyId).retrieve();
@@ -360,7 +355,7 @@ export class APIKeyResource extends BaseTypesenseResource {
   private async getAllAPIKeys(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject[]> {
     const returnAll = this.getBoolean(context, 'returnAll', itemIndex, true);
     const limit = this.getNumber(context, 'limit', itemIndex, 50);
@@ -377,8 +372,8 @@ export class APIKeyResource extends BaseTypesenseResource {
 
     // Filter by prefix if provided
     if (prefix) {
-      apiKeys = apiKeys.filter((key: IDataObject) =>
-        key.id && (key.id as string).startsWith(prefix)
+      apiKeys = apiKeys.filter(
+        (key: IDataObject) => key.id && (key.id as string).startsWith(prefix),
       );
     }
 
@@ -392,7 +387,7 @@ export class APIKeyResource extends BaseTypesenseResource {
   private async updateAPIKey(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const apiKeyId = this.validateRequired(context, 'apiKeyId', itemIndex);
     const useJson = this.getBoolean(context, 'jsonInput', itemIndex);
@@ -431,11 +426,9 @@ export class APIKeyResource extends BaseTypesenseResource {
           const metadata = jsonParse<IDataObject>(metadataJson);
           updateConfig.metadata = metadata;
         } catch (error) {
-          throw new NodeOperationError(
-            context.getNode(),
-            'Metadata JSON must be valid JSON.',
-            { itemIndex }
-          );
+          throw new NodeOperationError(context.getNode(), 'Metadata JSON must be valid JSON.', {
+            itemIndex,
+          });
         }
       }
     }
@@ -444,7 +437,7 @@ export class APIKeyResource extends BaseTypesenseResource {
       throw new NodeOperationError(
         context.getNode(),
         'Please provide at least one field to update.',
-        { itemIndex }
+        { itemIndex },
       );
     }
 

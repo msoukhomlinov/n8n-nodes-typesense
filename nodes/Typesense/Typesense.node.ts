@@ -2,7 +2,6 @@ import type {
   IDataObject,
   IExecuteFunctions,
   INodeExecutionData,
-  INodeProperties,
   INodeType,
   INodeTypeDescription,
   JsonObject,
@@ -11,6 +10,12 @@ import type {
 import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 
 import { TypesenseResourceFactory } from './TypesenseResourceFactory';
+import { collectionOperations, collectionFields } from './descriptions/CollectionDescription';
+import { documentOperations, documentFields } from './descriptions/DocumentDescription';
+import { searchOperations, searchFields } from './descriptions/SearchDescription';
+import { analyticsOperations, analyticsFields } from './descriptions/AnalyticsDescription';
+import { apiKeyOperations, apiKeyFields } from './descriptions/APIKeyDescription';
+import { aliasOperations, aliasFields } from './descriptions/AliasDescription';
 
 export class Typesense implements INodeType {
   description: INodeTypeDescription = {
@@ -41,39 +46,27 @@ export class Typesense implements INodeType {
         options: TypesenseResourceFactory.getResourceDisplayNames(),
         default: 'collection',
       },
+      // Collection operations and fields
+      ...collectionOperations,
+      ...collectionFields,
+      // Document operations and fields
+      ...documentOperations,
+      ...documentFields,
+      // Search operations and fields
+      ...searchOperations,
+      ...searchFields,
+      // Analytics operations and fields
+      ...analyticsOperations,
+      ...analyticsFields,
+      // API Key operations and fields
+      ...apiKeyOperations,
+      ...apiKeyFields,
+      // Alias operations and fields
+      ...aliasOperations,
+      ...aliasFields,
     ],
   };
 
-
-  /**
-   * Get all properties including dynamically loaded operations and fields
-   */
-  getProperties(resourceType?: string): INodeProperties[] {
-    const baseProperties: INodeProperties[] = [
-      {
-        displayName: 'Resource',
-        name: 'resource',
-        type: 'options',
-        noDataExpression: true,
-        options: TypesenseResourceFactory.getResourceDisplayNames(),
-        default: 'collection',
-      },
-    ];
-
-    // If a specific resource is selected, add its operations and fields
-    if (resourceType && TypesenseResourceFactory.isResourceSupported(resourceType)) {
-      const resource = TypesenseResourceFactory.getResource(resourceType);
-      baseProperties.push(...resource.getOperations());
-      baseProperties.push(...resource.getFields());
-    } else {
-      // Default to collection operations and fields for backward compatibility
-      const collectionResource = TypesenseResourceFactory.getResource('collection');
-      baseProperties.push(...collectionResource.getOperations());
-      baseProperties.push(...collectionResource.getFields());
-    }
-
-    return baseProperties;
-  }
 
   async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
     const items = this.getInputData();
@@ -89,7 +82,7 @@ export class Typesense implements INodeType {
           throw new NodeOperationError(
             this.getNode(),
             `The resource "${resourceType}" is not supported. Supported resources: ${TypesenseResourceFactory.getSupportedResources().join(', ')}`,
-            { itemIndex }
+            { itemIndex },
           );
         }
 

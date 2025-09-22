@@ -1,8 +1,4 @@
-import type {
-  IDataObject,
-  IExecuteFunctions,
-  INodeProperties,
-} from 'n8n-workflow';
+import type { IDataObject, IExecuteFunctions, INodeProperties } from 'n8n-workflow';
 import { NodeApiError, NodeOperationError } from 'n8n-workflow';
 
 import { BaseTypesenseResource } from './BaseTypesenseResource';
@@ -141,7 +137,7 @@ export class AliasResource extends BaseTypesenseResource {
   async execute(
     operation: string,
     context: IExecuteFunctions,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject | IDataObject[]> {
     const client = await getTypesenseClient.call(context);
 
@@ -166,7 +162,7 @@ export class AliasResource extends BaseTypesenseResource {
           throw new NodeOperationError(
             context.getNode(),
             `The operation "${operation}" is not supported for ${this.resourceName}.`,
-            { itemIndex }
+            { itemIndex },
           );
       }
     } catch (error) {
@@ -180,7 +176,7 @@ export class AliasResource extends BaseTypesenseResource {
   private async createAlias(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const aliasName = this.validateRequired(context, 'aliasName', itemIndex);
     const collectionName = this.validateRequired(context, 'collectionName', itemIndex);
@@ -196,7 +192,7 @@ export class AliasResource extends BaseTypesenseResource {
   private async deleteAlias(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const aliasName = this.validateRequired(context, 'aliasName', itemIndex);
     const response = await client.aliases(aliasName).delete();
@@ -206,7 +202,7 @@ export class AliasResource extends BaseTypesenseResource {
   private async getAlias(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const aliasName = this.validateRequired(context, 'aliasName', itemIndex);
     const response = await client.aliases(aliasName).retrieve();
@@ -216,7 +212,7 @@ export class AliasResource extends BaseTypesenseResource {
   private async getAllAliases(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject[]> {
     const returnAll = this.getBoolean(context, 'returnAll', itemIndex, true);
     const limit = this.getNumber(context, 'limit', itemIndex, 50);
@@ -234,8 +230,8 @@ export class AliasResource extends BaseTypesenseResource {
 
       // Filter by prefix if provided
       if (prefix) {
-        aliases = aliases.filter((alias: IDataObject) =>
-          alias.name && (alias.name as string).startsWith(prefix)
+        aliases = aliases.filter(
+          (alias: IDataObject) => alias.name && (alias.name as string).startsWith(prefix),
         );
       }
 
@@ -254,7 +250,7 @@ export class AliasResource extends BaseTypesenseResource {
   private async updateAlias(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const aliasName = this.validateRequired(context, 'aliasName', itemIndex);
     const collectionName = this.validateRequired(context, 'collectionName', itemIndex);

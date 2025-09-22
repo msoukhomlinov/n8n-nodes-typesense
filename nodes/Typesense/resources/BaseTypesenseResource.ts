@@ -22,7 +22,7 @@ export interface ITypesenseResource {
   execute(
     operation: string,
     context: IExecuteFunctions,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject | IDataObject[]>;
 }
 
@@ -56,13 +56,17 @@ export abstract class BaseTypesenseResource implements ITypesenseResource {
   abstract execute(
     operation: string,
     context: IExecuteFunctions,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject | IDataObject[]>;
 
   /**
    * Helper method to validate required parameters
    */
-  protected validateRequired(context: IExecuteFunctions, parameterName: string, itemIndex: number): string {
+  protected validateRequired(
+    context: IExecuteFunctions,
+    parameterName: string,
+    itemIndex: number,
+  ): string {
     const value = context.getNodeParameter(parameterName, itemIndex) as string;
     if (!value) {
       throw new Error(`${parameterName} is required`);
@@ -77,7 +81,7 @@ export abstract class BaseTypesenseResource implements ITypesenseResource {
     context: IExecuteFunctions,
     parameterName: string,
     itemIndex: number,
-    defaultValue: any = undefined
+    defaultValue: any = undefined,
   ): any {
     return context.getNodeParameter(parameterName, itemIndex, defaultValue);
   }
@@ -89,7 +93,7 @@ export abstract class BaseTypesenseResource implements ITypesenseResource {
     context: IExecuteFunctions,
     parameterName: string,
     itemIndex: number,
-    defaultValue: boolean = false
+    defaultValue: boolean = false,
   ): boolean {
     return context.getNodeParameter(parameterName, itemIndex, defaultValue) as boolean;
   }
@@ -101,7 +105,7 @@ export abstract class BaseTypesenseResource implements ITypesenseResource {
     context: IExecuteFunctions,
     parameterName: string,
     itemIndex: number,
-    defaultValue: number = 0
+    defaultValue: number = 0,
   ): number {
     return context.getNodeParameter(parameterName, itemIndex, defaultValue) as number;
   }
@@ -113,7 +117,7 @@ export abstract class BaseTypesenseResource implements ITypesenseResource {
     context: IExecuteFunctions,
     parameterName: string,
     itemIndex: number,
-    defaultValue: string[] = []
+    defaultValue: string[] = [],
   ): string[] {
     const value = context.getNodeParameter(parameterName, itemIndex, defaultValue) as string[];
     return Array.isArray(value) ? value : defaultValue;
@@ -126,7 +130,7 @@ export abstract class BaseTypesenseResource implements ITypesenseResource {
     context: IExecuteFunctions,
     parameterName: string,
     itemIndex: number,
-    defaultValue: IDataObject = {}
+    defaultValue: IDataObject = {},
   ): IDataObject {
     return context.getNodeParameter(parameterName, itemIndex, defaultValue) as IDataObject;
   }

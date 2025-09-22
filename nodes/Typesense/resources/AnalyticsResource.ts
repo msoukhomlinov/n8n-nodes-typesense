@@ -1,8 +1,4 @@
-import type {
-  IDataObject,
-  IExecuteFunctions,
-  INodeProperties,
-} from 'n8n-workflow';
+import type { IDataObject, IExecuteFunctions, INodeProperties } from 'n8n-workflow';
 import { NodeApiError, NodeOperationError, jsonParse } from 'n8n-workflow';
 
 import { BaseTypesenseResource } from './BaseTypesenseResource';
@@ -185,7 +181,12 @@ export class AnalyticsResource extends BaseTypesenseResource {
         displayOptions: {
           show: {
             resource: ['analytics'],
-            operation: ['getQuerySuggestions', 'getEvents', 'getPopularQueries', 'getNoResultsQueries'],
+            operation: [
+              'getQuerySuggestions',
+              'getEvents',
+              'getPopularQueries',
+              'getNoResultsQueries',
+            ],
           },
         },
         description: 'Maximum number of results to retrieve',
@@ -198,7 +199,13 @@ export class AnalyticsResource extends BaseTypesenseResource {
         displayOptions: {
           show: {
             resource: ['analytics'],
-            operation: ['getQuerySuggestions', 'getEvents', 'getPopularQueries', 'getNoResultsQueries', 'deleteEvents'],
+            operation: [
+              'getQuerySuggestions',
+              'getEvents',
+              'getPopularQueries',
+              'getNoResultsQueries',
+              'deleteEvents',
+            ],
           },
         },
         description: 'Start date for filtering events',
@@ -211,7 +218,13 @@ export class AnalyticsResource extends BaseTypesenseResource {
         displayOptions: {
           show: {
             resource: ['analytics'],
-            operation: ['getQuerySuggestions', 'getEvents', 'getPopularQueries', 'getNoResultsQueries', 'deleteEvents'],
+            operation: [
+              'getQuerySuggestions',
+              'getEvents',
+              'getPopularQueries',
+              'getNoResultsQueries',
+              'deleteEvents',
+            ],
           },
         },
         description: 'End date for filtering events',
@@ -276,7 +289,7 @@ export class AnalyticsResource extends BaseTypesenseResource {
   async execute(
     operation: string,
     context: IExecuteFunctions,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject | IDataObject[]> {
     const client = await getTypesenseClient.call(context);
 
@@ -304,7 +317,7 @@ export class AnalyticsResource extends BaseTypesenseResource {
           throw new NodeOperationError(
             context.getNode(),
             `The operation "${operation}" is not supported for ${this.resourceName}.`,
-            { itemIndex }
+            { itemIndex },
           );
       }
     } catch (error) {
@@ -318,7 +331,7 @@ export class AnalyticsResource extends BaseTypesenseResource {
   private async getQuerySuggestions(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject[]> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const limit = this.getNumber(context, 'limit', itemIndex, 50);
@@ -341,7 +354,7 @@ export class AnalyticsResource extends BaseTypesenseResource {
   private async createAnalyticsEvent(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const query = this.validateRequired(context, 'query', itemIndex);
     const eventType = this.validateRequired(context, 'eventType', itemIndex);
@@ -366,25 +379,25 @@ export class AnalyticsResource extends BaseTypesenseResource {
         const metadata = jsonParse<IDataObject>(metadataJson);
         Object.assign(eventData, metadata);
       } catch (error) {
-        throw new NodeOperationError(
-          context.getNode(),
-          'Metadata JSON must be valid JSON.',
-          { itemIndex }
-        );
+        throw new NodeOperationError(context.getNode(), 'Metadata JSON must be valid JSON.', {
+          itemIndex,
+        });
       }
     }
 
     // Analytics events are typically sent via a different endpoint
     // For now, we'll simulate this with a search that logs analytics
     const response = await client.multiSearch.perform({
-      searches: [{
-        collection: 'analytics_events',
-        q: query,
-        filter_by: '',
-        sort_by: '',
-        include_fields: '',
-        exclude_fields: '',
-      }]
+      searches: [
+        {
+          collection: 'analytics_events',
+          q: query,
+          filter_by: '',
+          sort_by: '',
+          include_fields: '',
+          exclude_fields: '',
+        },
+      ],
     });
 
     return {
@@ -398,12 +411,12 @@ export class AnalyticsResource extends BaseTypesenseResource {
   private async getAnalyticsEvents(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject[]> {
     const limit = this.getNumber(context, 'limit', itemIndex, 50);
 
     // Build filter conditions
-    let filterConditions: string[] = [];
+    const filterConditions: string[] = [];
 
     if (this.getOptional(context, 'filterBy', itemIndex)) {
       filterConditions.push(this.getOptional(context, 'filterBy', itemIndex));
@@ -420,15 +433,17 @@ export class AnalyticsResource extends BaseTypesenseResource {
     const filterBy = filterConditions.join(' && ');
 
     const response = await client.multiSearch.perform({
-      searches: [{
-        collection: 'analytics_events',
-        q: '*',
-        filter_by: filterBy || '',
-        sort_by: 'timestamp:desc',
-        limit,
-        include_fields: '',
-        exclude_fields: '',
-      }]
+      searches: [
+        {
+          collection: 'analytics_events',
+          q: '*',
+          filter_by: filterBy || '',
+          sort_by: 'timestamp:desc',
+          limit,
+          include_fields: '',
+          exclude_fields: '',
+        },
+      ],
     });
 
     return [response as IDataObject];
@@ -437,18 +452,20 @@ export class AnalyticsResource extends BaseTypesenseResource {
   private async deleteAnalyticsEvents(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject> {
     const filterBy = this.getOptional(context, 'filterBy', itemIndex, '');
 
     // Simulate delete operation
     const response = await client.multiSearch.perform({
-      searches: [{
-        collection: 'analytics_events',
-        q: '*',
-        filter_by: filterBy,
-        limit: 1000, // Get events to delete
-      }]
+      searches: [
+        {
+          collection: 'analytics_events',
+          q: '*',
+          filter_by: filterBy,
+          limit: 1000, // Get events to delete
+        },
+      ],
     });
 
     return {
@@ -462,7 +479,7 @@ export class AnalyticsResource extends BaseTypesenseResource {
   private async getPopularQueries(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject[]> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const limit = this.getNumber(context, 'limit', itemIndex, 50);
@@ -479,7 +496,7 @@ export class AnalyticsResource extends BaseTypesenseResource {
   private async getNoResultsQueries(
     context: IExecuteFunctions,
     client: any,
-    itemIndex: number
+    itemIndex: number,
   ): Promise<IDataObject[]> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const limit = this.getNumber(context, 'limit', itemIndex, 50);
