@@ -1,18 +1,56 @@
-# Cursor AI Project Boilerplate
+# n8n-nodes-typesense
 
-This repository contains a standardised project structure and configuration for Cursor AI-enhanced development environments. It includes customised settings, rules, and snippets to optimise the development experience with Cursor AI.
+An [n8n](https://n8n.io) community node that integrates with [Typesense](https://typesense.org/), the open source search platform. This first release focuses on collection management and is structured so that additional Typesense resources can be added with ease.
 
-[![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Support-yellow.svg)](https://buymeacoffee.com/msoukhomlinov)
+## Features
 
-## Support
+- Create new collections with structured inputs or raw JSON schemas.
+- Retrieve a collection or list all collections from your cluster.
+- Update existing schemas and delete collections you no longer need.
+- Built on the official [`typesense`](https://www.npmjs.com/package/typesense) JavaScript client for reliable API access.
 
-If you find this project helpful and would like to support its development:
-[![Buy Me A Coffee](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://buymeacoffee.com/msoukhomlinov)
+## Installation
 
-## License
+1. Clone this repository locally or add it to your n8n instance as a custom community node.
+2. From the repository directory, install dependencies and build the project:
+   ```bash
+   npm install
+   npm run build
+   ```
+3. Copy the generated `dist` directory (or publish the package) to your n8n community nodes folder.
+4. Restart n8n so it loads the new node.
 
-This project is licensed under the [MIT License](LICENSE).
+## Credentials
 
-## Contributing
+The node uses a dedicated **Typesense API** credential with the following fields:
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+- **API Key** – your Typesense admin or search key.
+- **Protocol** – HTTPS or HTTP, depending on your cluster.
+- **Host** and **Port** – the address of your Typesense server. Defaults to port 443 for HTTPS.
+- **Connection Timeout** – optional timeout in seconds for API requests.
+
+The credential tester calls the `/health` endpoint to confirm connectivity before the node runs.
+
+## Usage
+
+1. Add the **Typesense** node to your workflow and select the **Collection** resource.
+2. Pick an operation:
+   - **Create** – Define a collection schema through the UI helper or by pasting JSON.
+   - **Get** – Fetch a single collection.
+   - **Get Many** – List available collections with optional limits.
+   - **Update** – Add new fields or adjust metadata on an existing collection.
+   - **Delete** – Remove a collection entirely.
+3. Map incoming data or provide literal values as required.
+4. Execute the workflow to interact with your Typesense cluster.
+
+## Extending the node
+
+The node is organised with resource-specific description files and generic helper functions. To add support for documents, aliases, or other Typesense features, create new description modules and extend the `execute` logic without inflating any single file beyond a maintainable size.
+
+## Development scripts
+
+- `npm run build` – Compile TypeScript sources to JavaScript in `dist/`.
+- `npm run lint` – Lint the TypeScript sources.
+- `npm run format` – Format the project with Prettier.
+
+Feel free to open issues or pull requests if you would like to contribute additional functionality.
