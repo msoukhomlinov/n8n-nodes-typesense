@@ -41,3 +41,5 @@ __tests__/
 .tmp/
 .temp/
 *.tmp
+
+dist/

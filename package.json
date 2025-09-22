@@ -8,10 +8,10 @@
     "typesense"
   ],
   "license": "MIT",
-  "author": "Community Contributors",
+  "author": "Max Soukhomlinov",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/example/n8n-nodes-typesense.git"
+    "url": "git+https://github.com/msoukhomlinov/n8n-nodes-typesense.git"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
