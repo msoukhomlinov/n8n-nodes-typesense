@@ -22,6 +22,7 @@ export class Typesense implements INodeType {
     displayName: 'Typesense',
     name: 'typesense',
     icon: 'file:typesense.svg',
+    usableAsTool: true,
     group: ['transform'],
     version: 1,
     subtitle: '={{$parameter["operation"]}} {{ $parameter["resource"] }}',
