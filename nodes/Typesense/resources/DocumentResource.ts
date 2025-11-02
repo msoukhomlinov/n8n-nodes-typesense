@@ -1,8 +1,16 @@
-import type { IDataObject, IExecuteFunctions, INodeProperties } from 'n8n-workflow';
+import type { IDataObject, IExecuteFunctions, INodeProperties, JsonObject } from 'n8n-workflow';
 import { NodeApiError, NodeOperationError, jsonParse } from 'n8n-workflow';
+import type Client from 'typesense/lib/Typesense/Client';
 
 import { BaseTypesenseResource } from './BaseTypesenseResource';
 import { getTypesenseClient } from '../GenericFunctions';
+
+interface TypesenseCredentials {
+  apiKey: string;
+  host: string;
+  port?: number;
+  protocol: 'http' | 'https';
+}
 
 export class DocumentResource extends BaseTypesenseResource {
   constructor() {
@@ -384,6 +392,12 @@ export class DocumentResource extends BaseTypesenseResource {
         case 'deleteByQuery':
           return await this.deleteByQuery(context, client, itemIndex);
 
+        case 'import':
+          return await this.importDocuments(context, client, itemIndex);
+
+        case 'export':
+          return await this.exportDocuments(context, client, itemIndex);
+
         default:
           throw new NodeOperationError(
             context.getNode(),
@@ -395,13 +409,13 @@ export class DocumentResource extends BaseTypesenseResource {
       if (context.continueOnFail()) {
         return { error: (error as Error).message };
       }
-      throw new NodeApiError(context.getNode(), error as any, { itemIndex });
+      throw new NodeApiError(context.getNode(), error as JsonObject, { itemIndex });
     }
   }
 
   private async createDocument(
     context: IExecuteFunctions,
-    client: any,
+    client: Client,
     itemIndex: number,
   ): Promise<IDataObject> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
@@ -413,7 +427,7 @@ export class DocumentResource extends BaseTypesenseResource {
 
   private async deleteDocument(
     context: IExecuteFunctions,
-    client: any,
+    client: Client,
     itemIndex: number,
   ): Promise<IDataObject> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
@@ -425,7 +439,7 @@ export class DocumentResource extends BaseTypesenseResource {
 
   private async getDocument(
     context: IExecuteFunctions,
-    client: any,
+    client: Client,
     itemIndex: number,
   ): Promise<IDataObject> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
@@ -437,13 +451,13 @@ export class DocumentResource extends BaseTypesenseResource {
 
   private async getAllDocuments(
     context: IExecuteFunctions,
-    client: any,
+    client: Client,
     itemIndex: number,
   ): Promise<IDataObject[]> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const returnAll = this.getBoolean(context, 'returnAll', itemIndex, true);
 
-    const searchParams: any = {};
+    const searchParams: IDataObject = {};
 
     if (this.getOptional(context, 'filterBy', itemIndex)) {
       searchParams.filter_by = this.getOptional(context, 'filterBy', itemIndex);
@@ -464,18 +478,20 @@ export class DocumentResource extends BaseTypesenseResource {
     searchParams.q = '*'; // Match all documents
 
     const response = await client.collections(collection).documents().search(searchParams);
+    const searchResponse = response as unknown as IDataObject;
+    const hits = ((searchResponse.hits as unknown) as IDataObject[]) || [];
 
     if (!returnAll) {
       const limit = this.getNumber(context, 'limit', itemIndex, 50);
-      return (response as any).hits?.slice(0, limit).map((hit: any) => hit.document) || [];
+      return hits.slice(0, limit).map((hit: IDataObject) => hit.document as IDataObject);
     }
 
-    return (response as any).hits?.map((hit: any) => hit.document) || [];
+    return hits.map((hit: IDataObject) => hit.document as IDataObject);
   }
 
   private async updateDocument(
     context: IExecuteFunctions,
-    client: any,
+    client: Client,
     itemIndex: number,
   ): Promise<IDataObject> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
@@ -488,13 +504,13 @@ export class DocumentResource extends BaseTypesenseResource {
 
   private async searchDocuments(
     context: IExecuteFunctions,
-    client: any,
+    client: Client,
     itemIndex: number,
   ): Promise<IDataObject[]> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const query = this.validateRequired(context, 'query', itemIndex);
 
-    const searchParams: any = {
+    const searchParams: IDataObject = {
       q: query,
     };
 
@@ -538,24 +554,22 @@ export class DocumentResource extends BaseTypesenseResource {
     }
 
     const response = await client.collections(collection).documents().search(searchParams);
-    return [response as IDataObject];
+    return [response as unknown as IDataObject];
   }
 
   private async deleteByQuery(
     context: IExecuteFunctions,
-    client: any,
+    client: Client,
     itemIndex: number,
   ): Promise<IDataObject> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
-    const query = this.validateRequired(context, 'query', itemIndex);
-
-    const filterBy = this.getOptional(context, 'filterBy', itemIndex);
+    const filterBy = this.validateRequired(context, 'filterBy', itemIndex);
 
     const response = await client
       .collections(collection)
       .documents()
-      .delete({ filter_by: filterBy, q: query });
-    return response as IDataObject;
+      .delete({ filter_by: filterBy });
+    return response as unknown as IDataObject;
   }
 
   private async buildDocumentData(
@@ -612,5 +626,159 @@ export class DocumentResource extends BaseTypesenseResource {
     }
 
     return processed;
+  }
+
+  /**
+   * Get the base URL for Typesense API
+   */
+  private getBaseUrl(credentials: TypesenseCredentials): string {
+    const port = credentials.port ?? (credentials.protocol === 'https' ? 443 : 8108);
+    return `${credentials.protocol}://${credentials.host}:${port}`;
+  }
+
+  private async importDocuments(
+    context: IExecuteFunctions,
+    client: Client,
+    itemIndex: number,
+  ): Promise<IDataObject> {
+    const collection = this.validateRequired(context, 'collection', itemIndex);
+    const documentsJsonl = this.validateRequired(context, 'documentsJsonl', itemIndex);
+    const credentials = (await context.getCredentials('typesenseApi')) as TypesenseCredentials;
+
+    // Build query parameters
+    const importParameters = this.getObject(context, 'importParameters', itemIndex);
+    const queryParams: Record<string, string> = {};
+
+    if (importParameters.batchSize) {
+      queryParams.batch_size = importParameters.batchSize.toString();
+    }
+
+    if (importParameters.returnId !== undefined) {
+      queryParams.return_id = importParameters.returnId ? 'true' : 'false';
+    }
+
+    if (importParameters.returnDoc !== undefined) {
+      queryParams.return_doc = importParameters.returnDoc ? 'true' : 'false';
+    }
+
+    if (importParameters.action) {
+      queryParams.action = String(importParameters.action);
+    }
+
+    if (importParameters.dirtyValues) {
+      queryParams.dirty_values = String(importParameters.dirtyValues);
+    }
+
+    if (importParameters.remoteEmbeddingBatchSize) {
+      queryParams.remote_embedding_batch_size = importParameters.remoteEmbeddingBatchSize.toString();
+    }
+
+    const baseUrl = this.getBaseUrl(credentials);
+    let url = `${baseUrl}/collections/${encodeURIComponent(collection)}/documents/import`;
+
+    if (Object.keys(queryParams).length > 0) {
+      const params = new URLSearchParams();
+      Object.entries(queryParams).forEach(([key, value]) => {
+        params.append(key, value);
+      });
+      url += `?${params.toString()}`;
+    }
+
+    // Make HTTP request with JSONL content
+    const options: IDataObject = {
+      method: 'POST',
+      url,
+      headers: {
+        'X-TYPESENSE-API-KEY': credentials.apiKey,
+        'Content-Type': 'application/octet-stream',
+      },
+      body: documentsJsonl,
+      encoding: 'utf8',
+    };
+
+    const response = await context.helpers.request(options);
+
+    // Parse JSONL response (each line is a JSON object)
+    const lines = response.split('\n').filter((line: string) => line.trim());
+    const results = lines.map((line: string) => {
+      try {
+        return jsonParse<IDataObject>(line);
+      } catch {
+        return { error: 'Failed to parse response line', raw: line };
+      }
+    });
+
+    return {
+      success: true,
+      results,
+      total: results.length,
+    } as IDataObject;
+  }
+
+  private async exportDocuments(
+    context: IExecuteFunctions,
+    client: Client,
+    itemIndex: number,
+  ): Promise<IDataObject> {
+    const collection = this.validateRequired(context, 'collection', itemIndex);
+    const credentials = (await context.getCredentials('typesenseApi')) as TypesenseCredentials;
+
+    // Build query parameters
+    const exportParameters = this.getObject(context, 'exportParameters', itemIndex);
+    const queryParams: Record<string, string> = {};
+
+    if (exportParameters?.filterBy) {
+      queryParams.filter_by = String(exportParameters.filterBy);
+    }
+
+    if (exportParameters?.includeFields) {
+      queryParams.include_fields = String(exportParameters.includeFields);
+    }
+
+    if (exportParameters?.excludeFields) {
+      queryParams.exclude_fields = String(exportParameters.excludeFields);
+    }
+
+    const baseUrl = this.getBaseUrl(credentials);
+    let url = `${baseUrl}/collections/${encodeURIComponent(collection)}/documents/export`;
+
+    if (Object.keys(queryParams).length > 0) {
+      const params = new URLSearchParams();
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value) {
+          params.append(key, value);
+        }
+      });
+      url += `?${params.toString()}`;
+    }
+
+    // Make HTTP request to get JSONL export
+    const options: IDataObject = {
+      method: 'GET',
+      url,
+      headers: {
+        'X-TYPESENSE-API-KEY': credentials.apiKey,
+      },
+      encoding: 'utf8',
+    };
+
+    const response = await context.helpers.request(options);
+
+    // Parse JSONL response (each line is a JSON document)
+    const lines = response.split('\n').filter((line: string) => line.trim());
+    const documents = lines.map((line: string) => {
+      try {
+        return jsonParse<IDataObject>(line);
+      } catch {
+        return { error: 'Failed to parse document line', raw: line };
+      }
+    });
+
+    return {
+      success: true,
+      documents,
+      total: documents.length,
+      jsonl: response,
+    } as IDataObject;
   }
 }

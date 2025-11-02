@@ -5,6 +5,9 @@ import { SearchResource } from './resources/SearchResource';
 import { AnalyticsResource } from './resources/AnalyticsResource';
 import { APIKeyResource } from './resources/APIKeyResource';
 import { AliasResource } from './resources/AliasResource';
+import { SynonymResource } from './resources/SynonymResource';
+import { OverrideResource } from './resources/OverrideResource';
+import { ConversationResource } from './resources/ConversationResource';
 
 export class TypesenseResourceFactory {
   private static resourceInstances: Map<string, ITypesenseResource> = new Map();
@@ -44,6 +47,15 @@ export class TypesenseResourceFactory {
       case 'alias':
         return new AliasResource();
 
+      case 'synonym':
+        return new SynonymResource();
+
+      case 'override':
+        return new OverrideResource();
+
+      case 'conversation':
+        return new ConversationResource();
+
       default:
         throw new Error(`Resource type "${resourceType}" is not supported.`);
     }
@@ -53,7 +65,7 @@ export class TypesenseResourceFactory {
    * Get all supported resource types
    */
   static getSupportedResources(): string[] {
-    return ['collection', 'document', 'search', 'analytics', 'apiKey', 'alias'];
+    return ['collection', 'document', 'search', 'analytics', 'apiKey', 'alias', 'synonym', 'override', 'conversation'];
   }
 
   /**
@@ -74,6 +86,9 @@ export class TypesenseResourceFactory {
       { name: 'Analytics', value: 'analytics' },
       { name: 'API Key', value: 'apiKey' },
       { name: 'Alias', value: 'alias' },
+      { name: 'Synonym', value: 'synonym' },
+      { name: 'Override', value: 'override' },
+      { name: 'Conversation', value: 'conversation' },
     ];
   }
 }

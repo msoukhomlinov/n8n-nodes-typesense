@@ -54,6 +54,18 @@ export const documentOperations: INodeProperties[] = [
         action: 'Delete documents by query',
         description: 'Delete documents matching a query',
       },
+      {
+        name: 'Import',
+        value: 'import',
+        action: 'Import documents',
+        description: 'Import documents from JSONL format',
+      },
+      {
+        name: 'Export',
+        value: 'export',
+        action: 'Export documents',
+        description: 'Export documents to JSONL format',
+      },
     ],
     default: 'create',
   },
@@ -69,7 +81,7 @@ export const documentFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['document'],
-        operation: ['create', 'delete', 'get', 'getAll', 'update', 'search', 'deleteByQuery'],
+        operation: ['create', 'delete', 'get', 'getAll', 'update', 'search', 'deleteByQuery', 'import', 'export'],
       },
     },
     description: 'Name of the collection to operate on',
@@ -285,5 +297,134 @@ export const documentFields: INodeProperties[] = [
       },
     },
     description: 'Comma-separated list of fields to exclude from results',
+  },
+  {
+    displayName: 'Documents Data (JSONL)',
+    name: 'documentsJsonl',
+    type: 'string',
+    typeOptions: {
+      rows: 10,
+    },
+    default: '',
+    required: true,
+    displayOptions: {
+      show: {
+        resource: ['document'],
+        operation: ['import'],
+      },
+    },
+    description:
+      'Documents in JSONL format (newline-delimited JSON). Each line should be a valid JSON document.',
+  },
+  {
+    displayName: 'Import Parameters',
+    name: 'importParameters',
+    type: 'collection',
+    placeholder: 'Add Parameter',
+    default: {},
+    displayOptions: {
+      show: {
+        resource: ['document'],
+        operation: ['import'],
+      },
+    },
+    options: [
+      {
+        displayName: 'Batch Size',
+        name: 'batchSize',
+        type: 'number',
+        default: 40,
+        typeOptions: {
+          minValue: 1,
+        },
+        description: 'Number of documents to import in each batch',
+      },
+      {
+        displayName: 'Return ID',
+        name: 'returnId',
+        type: 'boolean',
+        default: false,
+        description: 'Return the ID of imported documents in the response',
+      },
+      {
+        displayName: 'Return Document',
+        name: 'returnDoc',
+        type: 'boolean',
+        default: false,
+        description: 'Return the imported document in the response',
+      },
+      {
+        displayName: 'Action',
+        name: 'action',
+        type: 'options',
+        options: [
+          { name: 'Create', value: 'create' },
+          { name: 'Update', value: 'update' },
+          { name: 'Upsert', value: 'upsert' },
+          { name: 'Emplace', value: 'emplace' },
+        ],
+        default: 'create',
+        description: 'Action to perform on documents',
+      },
+      {
+        displayName: 'Dirty Values',
+        name: 'dirtyValues',
+        type: 'options',
+        options: [
+          { name: 'Coerce or Reject', value: 'coerce_or_reject' },
+          { name: 'Coerce or Drop', value: 'coerce_or_drop' },
+          { name: 'Drop', value: 'drop' },
+          { name: 'Reject', value: 'reject' },
+        ],
+        default: 'coerce_or_reject',
+        description: 'How to handle values that do not match the schema',
+      },
+      {
+        displayName: 'Remote Embedding Batch Size',
+        name: 'remoteEmbeddingBatchSize',
+        type: 'number',
+        default: 10,
+        typeOptions: {
+          minValue: 1,
+        },
+        description: 'Batch size for remote embedding generation',
+      },
+    ],
+  },
+  {
+    displayName: 'Export Parameters',
+    name: 'exportParameters',
+    type: 'collection',
+    placeholder: 'Add Parameter',
+    default: {},
+    displayOptions: {
+      show: {
+        resource: ['document'],
+        operation: ['export'],
+      },
+    },
+    options: [
+      {
+        displayName: 'Filter By',
+        name: 'filterBy',
+        type: 'string',
+        default: '',
+        description: 'Filter expression (e.g., num_employees:>100)',
+      },
+      {
+        displayName: 'Include Fields',
+        name: 'includeFields',
+        type: 'string',
+        default: '',
+        description: 'Comma-separated list of fields to include in export',
+      },
+      {
+        displayName: 'Exclude Fields',
+        name: 'excludeFields',
+        type: 'string',
+        default: '',
+        description: 'Comma-separated list of fields to exclude from export',
+      },
+    ],
   },
 ];

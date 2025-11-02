@@ -1,8 +1,16 @@
-import type { IDataObject, IExecuteFunctions, INodeProperties } from 'n8n-workflow';
+import type { IDataObject, IExecuteFunctions, INodeProperties, JsonObject } from 'n8n-workflow';
 import { NodeApiError, NodeOperationError, jsonParse } from 'n8n-workflow';
+import type Client from 'typesense/lib/Typesense/Client';
 
 import { BaseTypesenseResource } from './BaseTypesenseResource';
 import { getTypesenseClient } from '../GenericFunctions';
+
+interface TypesenseCredentials {
+  apiKey: string;
+  host: string;
+  port?: number;
+  protocol: 'http' | 'https';
+}
 
 export class AnalyticsResource extends BaseTypesenseResource {
   constructor() {
@@ -23,43 +31,61 @@ export class AnalyticsResource extends BaseTypesenseResource {
         },
         options: [
           {
-            name: 'Get Query Suggestions',
-            value: 'getQuerySuggestions',
-            action: 'Get query suggestions',
-            description: 'Retrieve popular search queries and suggestions',
-          },
-          {
             name: 'Create Analytics Event',
             value: 'createEvent',
             action: 'Create analytics event',
-            description: 'Log a custom analytics event',
+            description: 'Submit an analytics event (requires analytics rule)',
           },
           {
             name: 'Get Analytics Events',
             value: 'getEvents',
             action: 'Get analytics events',
-            description: 'Retrieve analytics events with filtering',
+            description: 'Retrieve analytics events for a user and rule',
           },
           {
-            name: 'Delete Analytics Events',
-            value: 'deleteEvents',
-            action: 'Delete analytics events',
-            description: 'Delete analytics events by query',
+            name: 'Flush Analytics',
+            value: 'flush',
+            action: 'Flush analytics',
+            description: 'Flush in-memory analytics data to disk',
           },
           {
-            name: 'Get Popular Queries',
-            value: 'getPopularQueries',
-            action: 'Get popular queries',
-            description: 'Retrieve most popular search queries',
+            name: 'Get Analytics Status',
+            value: 'getStatus',
+            action: 'Get analytics status',
+            description: 'Get analytics subsystem status',
           },
           {
-            name: 'Get No-Results Queries',
-            value: 'getNoResultsQueries',
-            action: 'Get no-results queries',
-            description: 'Retrieve queries that returned no results',
+            name: 'Create Analytics Rule',
+            value: 'createRule',
+            action: 'Create analytics rule',
+            description: 'Create one or more analytics rules',
+          },
+          {
+            name: 'Get Analytics Rules',
+            value: 'getRules',
+            action: 'Get analytics rules',
+            description: 'Retrieve all analytics rules',
+          },
+          {
+            name: 'Get Analytics Rule',
+            value: 'getRule',
+            action: 'Get analytics rule',
+            description: 'Retrieve a specific analytics rule',
+          },
+          {
+            name: 'Update Analytics Rule',
+            value: 'updateRule',
+            action: 'Update analytics rule',
+            description: 'Create or update an analytics rule',
+          },
+          {
+            name: 'Delete Analytics Rule',
+            value: 'deleteRule',
+            action: 'Delete analytics rule',
+            description: 'Delete an analytics rule',
           },
         ],
-        default: 'getQuerySuggestions',
+        default: 'createEvent',
       },
     ];
   }
@@ -67,57 +93,30 @@ export class AnalyticsResource extends BaseTypesenseResource {
   getFields(): INodeProperties[] {
     return [
       {
-        displayName: 'Collection Name',
-        name: 'collection',
+        displayName: 'Rule Name',
+        name: 'ruleName',
         type: 'string',
         default: '',
         required: true,
         displayOptions: {
           show: {
             resource: ['analytics'],
-            operation: ['getQuerySuggestions', 'getPopularQueries', 'getNoResultsQueries'],
+            operation: ['createEvent', 'getRule', 'updateRule', 'deleteRule'],
           },
         },
-        description: 'Name of the collection for query suggestions',
-      },
-      {
-        displayName: 'Query Text',
-        name: 'query',
-        type: 'string',
-        default: '',
-        required: true,
-        displayOptions: {
-          show: {
-            resource: ['analytics'],
-            operation: ['createEvent'],
-          },
-        },
-        description: 'Search query text for the analytics event',
-      },
-      {
-        displayName: 'User ID',
-        name: 'userId',
-        type: 'string',
-        default: '',
-        displayOptions: {
-          show: {
-            resource: ['analytics'],
-            operation: ['createEvent'],
-          },
-        },
-        description: 'User identifier for the analytics event',
+        description: 'Name of the analytics rule this event corresponds to',
       },
       {
         displayName: 'Event Type',
         name: 'eventType',
         type: 'options',
         options: [
-          { name: 'Search', value: 'search' },
           { name: 'Click', value: 'click' },
           { name: 'Conversion', value: 'conversion' },
-          { name: 'Purchase', value: 'purchase' },
+          { name: 'Query', value: 'query' },
+          { name: 'Visit', value: 'visit' },
         ],
-        default: 'search',
+        default: 'query',
         required: true,
         displayOptions: {
           show: {
@@ -128,24 +127,11 @@ export class AnalyticsResource extends BaseTypesenseResource {
         description: 'Type of analytics event',
       },
       {
-        displayName: 'Document ID',
-        name: 'documentId',
-        type: 'string',
-        default: '',
-        displayOptions: {
-          show: {
-            resource: ['analytics'],
-            operation: ['createEvent'],
-          },
-        },
-        description: 'Document ID associated with the event (for click/conversion events)',
-      },
-      {
-        displayName: 'Metadata (JSON)',
-        name: 'metadataJson',
+        displayName: 'Event Data (JSON)',
+        name: 'eventDataJson',
         type: 'string',
         typeOptions: {
-          rows: 4,
+          rows: 6,
         },
         default: '',
         displayOptions: {
@@ -154,134 +140,84 @@ export class AnalyticsResource extends BaseTypesenseResource {
             operation: ['createEvent'],
           },
         },
-        description: 'Additional metadata for the analytics event as JSON',
+        description:
+          'Event data as JSON. Should include user_id, doc_id (or doc_ids), q (query), and optionally analytics_tag',
       },
       {
-        displayName: 'Filter By',
-        name: 'filterBy',
+        displayName: 'User ID',
+        name: 'userId',
         type: 'string',
         default: '',
+        required: true,
         displayOptions: {
           show: {
             resource: ['analytics'],
-            operation: ['getEvents', 'deleteEvents'],
+            operation: ['getEvents'],
           },
         },
-        description: 'Filter expression for events (e.g., user_id:=user123)',
+        description: 'User identifier to retrieve events for',
       },
       {
-        displayName: 'Limit',
-        name: 'limit',
+        displayName: 'Rule Name',
+        name: 'ruleNameForEvents',
+        type: 'string',
+        default: '',
+        required: true,
+        displayOptions: {
+          show: {
+            resource: ['analytics'],
+            operation: ['getEvents'],
+          },
+        },
+        description: 'Analytics rule name to retrieve events for',
+      },
+      {
+        displayName: 'Number of Events',
+        name: 'n',
         type: 'number',
-        default: 50,
+        default: 100,
         typeOptions: {
           minValue: 1,
-          maxValue: 200,
+          maxValue: 1000,
         },
         displayOptions: {
           show: {
             resource: ['analytics'],
-            operation: [
-              'getQuerySuggestions',
-              'getEvents',
-              'getPopularQueries',
-              'getNoResultsQueries',
-            ],
+            operation: ['getEvents'],
           },
         },
-        description: 'Maximum number of results to retrieve',
+        description: 'Number of events to return (max 1000)',
       },
       {
-        displayName: 'Start Date',
-        name: 'startDate',
-        type: 'dateTime',
+        displayName: 'Rule Tag',
+        name: 'ruleTag',
+        type: 'string',
         default: '',
         displayOptions: {
           show: {
             resource: ['analytics'],
-            operation: [
-              'getQuerySuggestions',
-              'getEvents',
-              'getPopularQueries',
-              'getNoResultsQueries',
-              'deleteEvents',
-            ],
+            operation: ['getRules'],
           },
         },
-        description: 'Start date for filtering events',
+        description: 'Filter rules by rule_tag (optional)',
       },
       {
-        displayName: 'End Date',
-        name: 'endDate',
-        type: 'dateTime',
+        displayName: 'Analytics Rule (JSON)',
+        name: 'ruleJson',
+        type: 'string',
+        typeOptions: {
+          rows: 10,
+        },
         default: '',
+        required: true,
         displayOptions: {
           show: {
             resource: ['analytics'],
-            operation: [
-              'getQuerySuggestions',
-              'getEvents',
-              'getPopularQueries',
-              'getNoResultsQueries',
-              'deleteEvents',
-            ],
+            operation: ['createRule', 'updateRule'],
           },
         },
-        description: 'End date for filtering events',
-      },
-      {
-        displayName: 'Query Suggestions Parameters',
-        name: 'suggestionsParameters',
-        type: 'collection',
-        placeholder: 'Add Parameter',
-        default: {},
-        displayOptions: {
-          show: {
-            resource: ['analytics'],
-            operation: ['getQuerySuggestions'],
-          },
-        },
-        options: [
-          {
-            displayName: 'Prefix',
-            name: 'prefix',
-            type: 'string',
-            default: '',
-            description: 'Returns suggestions that match the given prefix',
-          },
-          {
-            displayName: 'Infix',
-            name: 'infix',
-            type: 'string',
-            default: '',
-            description: 'Infix search query for suggestions',
-          },
-          {
-            displayName: 'Limit',
-            name: 'suggestionLimit',
-            type: 'number',
-            default: 10,
-            typeOptions: {
-              minValue: 1,
-              maxValue: 50,
-            },
-            description: 'Maximum number of suggestions to return',
-          },
-          {
-            displayName: 'Include Groups',
-            name: 'includeGroups',
-            type: 'boolean',
-            default: false,
-            description: 'Include group suggestions',
-          },
-          {
-            displayName: 'Group By',
-            name: 'groupBy',
-            type: 'string',
-            default: '',
-            description: 'Field to group suggestions by',
-          },
-        ],
+        description:
+          'Analytics rule as JSON. Required fields: name, type (popular_queries|nohits_queries|counter|log), collection, event_type. Can be a single object or array of objects.',
       },
     ];
   }
@@ -292,26 +228,36 @@ export class AnalyticsResource extends BaseTypesenseResource {
     itemIndex: number,
   ): Promise<IDataObject | IDataObject[]> {
     const client = await getTypesenseClient.call(context);
+    const credentials = (await context.getCredentials('typesenseApi')) as TypesenseCredentials;
 
     try {
       switch (operation) {
-        case 'getQuerySuggestions':
-          return await this.getQuerySuggestions(context, client, itemIndex);
-
         case 'createEvent':
-          return await this.createAnalyticsEvent(context, client, itemIndex);
+          return await this.createAnalyticsEvent(context, client, credentials, itemIndex);
 
         case 'getEvents':
-          return await this.getAnalyticsEvents(context, client, itemIndex);
+          return await this.getAnalyticsEvents(context, client, credentials, itemIndex);
 
-        case 'deleteEvents':
-          return await this.deleteAnalyticsEvents(context, client, itemIndex);
+        case 'flush':
+          return await this.flushAnalytics(context, client, credentials);
 
-        case 'getPopularQueries':
-          return await this.getPopularQueries(context, client, itemIndex);
+        case 'getStatus':
+          return await this.getAnalyticsStatus(context, client, credentials);
 
-        case 'getNoResultsQueries':
-          return await this.getNoResultsQueries(context, client, itemIndex);
+        case 'createRule':
+          return await this.createAnalyticsRule(context, client, credentials, itemIndex);
+
+        case 'getRules':
+          return await this.getAnalyticsRules(context, client, credentials, itemIndex);
+
+        case 'getRule':
+          return await this.getAnalyticsRule(context, client, credentials, itemIndex);
+
+        case 'updateRule':
+          return await this.updateAnalyticsRule(context, client, credentials, itemIndex);
+
+        case 'deleteRule':
+          return await this.deleteAnalyticsRule(context, client, credentials, itemIndex);
 
         default:
           throw new NodeOperationError(
@@ -324,211 +270,258 @@ export class AnalyticsResource extends BaseTypesenseResource {
       if (context.continueOnFail()) {
         return { error: (error as Error).message };
       }
-      throw new NodeApiError(context.getNode(), error as any, { itemIndex });
+      throw new NodeApiError(context.getNode(), error as JsonObject, { itemIndex });
     }
   }
 
-  private async getQuerySuggestions(
+  /**
+   * Get the base URL for Typesense API
+   */
+  private getBaseUrl(credentials: TypesenseCredentials): string {
+    const port = credentials.port ?? (credentials.protocol === 'https' ? 443 : 8108);
+    return `${credentials.protocol}://${credentials.host}:${port}`;
+  }
+
+  /**
+   * Make HTTP request to Typesense analytics endpoint
+   */
+  private async makeAnalyticsRequest(
     context: IExecuteFunctions,
-    client: any,
-    itemIndex: number,
-  ): Promise<IDataObject[]> {
-    const collection = this.validateRequired(context, 'collection', itemIndex);
-    const limit = this.getNumber(context, 'limit', itemIndex, 50);
+    credentials: TypesenseCredentials,
+    method: string,
+    endpoint: string,
+    body?: IDataObject | IDataObject[],
+    queryParams?: Record<string, string>,
+  ): Promise<IDataObject | IDataObject[]> {
+    const baseUrl = this.getBaseUrl(credentials);
+    let url = `${baseUrl}${endpoint}`;
 
-    const params: IDataObject = {
-      q: this.getOptional(context, 'query', itemIndex, ''),
-      limit,
-    };
-
-    // Add suggestions parameters
-    const suggestionsParameters = this.getObject(context, 'suggestionsParameters', itemIndex);
-    if (suggestionsParameters) {
-      Object.assign(params, this.processSuggestionsParameters(suggestionsParameters));
+    if (queryParams) {
+      const params = new URLSearchParams();
+      Object.entries(queryParams).forEach(([key, value]) => {
+        if (value) {
+          params.append(key, value);
+        }
+      });
+      if (params.toString()) {
+        url += `?${params.toString()}`;
+      }
     }
 
-    const response = await client.collections(collection).documents().search(params);
-    return [response as IDataObject];
+    const options: IDataObject = {
+      method,
+      url,
+      headers: {
+        'X-TYPESENSE-API-KEY': credentials.apiKey,
+        'Content-Type': 'application/json',
+      },
+    };
+
+    if (body) {
+      options.body = body;
+      options.json = true;
+    }
+
+    return (await context.helpers.request(options)) as IDataObject | IDataObject[];
   }
 
   private async createAnalyticsEvent(
     context: IExecuteFunctions,
-    client: any,
+    client: Client,
+    credentials: TypesenseCredentials,
     itemIndex: number,
   ): Promise<IDataObject> {
-    const query = this.validateRequired(context, 'query', itemIndex);
+    const ruleName = this.validateRequired(context, 'ruleName', itemIndex);
     const eventType = this.validateRequired(context, 'eventType', itemIndex);
+    const eventDataJson = this.validateRequired(context, 'eventDataJson', itemIndex);
 
-    const eventData: IDataObject = {
-      q: query,
-      type: eventType,
+    let eventData: IDataObject;
+    try {
+      eventData = jsonParse<IDataObject>(eventDataJson);
+    } catch {
+      throw new NodeOperationError(context.getNode(), 'Event data JSON must be valid JSON.', {
+        itemIndex,
+      });
+    }
+
+    const analyticsEvent: IDataObject = {
+      name: ruleName,
+      event_type: eventType,
+      data: eventData,
     };
 
-    if (this.getOptional(context, 'userId', itemIndex)) {
-      eventData.user_id = this.getOptional(context, 'userId', itemIndex);
-    }
+    const response = await this.makeAnalyticsRequest(
+      context,
+      credentials,
+      'POST',
+      '/analytics/events',
+      analyticsEvent,
+    );
 
-    if (this.getOptional(context, 'documentId', itemIndex)) {
-      eventData.doc_id = this.getOptional(context, 'documentId', itemIndex);
-    }
-
-    // Add metadata if provided
-    const metadataJson = this.getOptional(context, 'metadataJson', itemIndex);
-    if (metadataJson) {
-      try {
-        const metadata = jsonParse<IDataObject>(metadataJson);
-        Object.assign(eventData, metadata);
-      } catch (error) {
-        throw new NodeOperationError(context.getNode(), 'Metadata JSON must be valid JSON.', {
-          itemIndex,
-        });
-      }
-    }
-
-    // Analytics events are typically sent via a different endpoint
-    // For now, we'll simulate this with a search that logs analytics
-    const response = await client.multiSearch.perform({
-      searches: [
-        {
-          collection: 'analytics_events',
-          q: query,
-          filter_by: '',
-          sort_by: '',
-          include_fields: '',
-          exclude_fields: '',
-        },
-      ],
-    });
-
-    return {
-      success: true,
-      event_type: eventType,
-      query: query,
-      timestamp: new Date().toISOString(),
-    } as IDataObject;
+    return response as IDataObject;
   }
 
   private async getAnalyticsEvents(
     context: IExecuteFunctions,
-    client: any,
+    client: Client,
+    credentials: TypesenseCredentials,
     itemIndex: number,
   ): Promise<IDataObject[]> {
-    const limit = this.getNumber(context, 'limit', itemIndex, 50);
+    const userId = this.validateRequired(context, 'userId', itemIndex);
+    const ruleName = this.validateRequired(context, 'ruleNameForEvents', itemIndex);
+    const n = this.getNumber(context, 'n', itemIndex, 100);
 
-    // Build filter conditions
-    const filterConditions: string[] = [];
-
-    if (this.getOptional(context, 'filterBy', itemIndex)) {
-      filterConditions.push(this.getOptional(context, 'filterBy', itemIndex));
-    }
-
-    if (this.getOptional(context, 'startDate', itemIndex)) {
-      filterConditions.push(`timestamp:>=${this.getOptional(context, 'startDate', itemIndex)}`);
-    }
-
-    if (this.getOptional(context, 'endDate', itemIndex)) {
-      filterConditions.push(`timestamp:<=${this.getOptional(context, 'endDate', itemIndex)}`);
-    }
-
-    const filterBy = filterConditions.join(' && ');
-
-    const response = await client.multiSearch.perform({
-      searches: [
-        {
-          collection: 'analytics_events',
-          q: '*',
-          filter_by: filterBy || '',
-          sort_by: 'timestamp:desc',
-          limit,
-          include_fields: '',
-          exclude_fields: '',
-        },
-      ],
-    });
+    const response = await this.makeAnalyticsRequest(
+      context,
+      credentials,
+      'GET',
+      '/analytics/events',
+      undefined,
+      {
+        user_id: userId,
+        name: ruleName,
+        n: n.toString(),
+      },
+    );
 
     return [response as IDataObject];
   }
 
-  private async deleteAnalyticsEvents(
+  private async flushAnalytics(
     context: IExecuteFunctions,
-    client: any,
+    client: Client,
+    credentials: TypesenseCredentials,
+  ): Promise<IDataObject> {
+    const response = await this.makeAnalyticsRequest(context, credentials, 'POST', '/analytics/flush');
+
+    return response as IDataObject;
+  }
+
+  private async getAnalyticsStatus(
+    context: IExecuteFunctions,
+    client: Client,
+    credentials: TypesenseCredentials,
+  ): Promise<IDataObject> {
+    const response = await this.makeAnalyticsRequest(
+      context,
+      credentials,
+      'GET',
+      '/analytics/status',
+    );
+
+    return response as IDataObject;
+  }
+
+  private async createAnalyticsRule(
+    context: IExecuteFunctions,
+    client: Client,
+    credentials: TypesenseCredentials,
+    itemIndex: number,
+  ): Promise<IDataObject | IDataObject[]> {
+    const ruleJson = this.validateRequired(context, 'ruleJson', itemIndex);
+
+    let ruleData: IDataObject | IDataObject[];
+    try {
+      ruleData = jsonParse<IDataObject | IDataObject[]>(ruleJson);
+    } catch {
+      throw new NodeOperationError(context.getNode(), 'Rule JSON must be valid JSON.', {
+        itemIndex,
+      });
+    }
+
+    const response = await this.makeAnalyticsRequest(
+      context,
+      credentials,
+      'POST',
+      '/analytics/rules',
+      ruleData,
+    );
+
+    return Array.isArray(response) ? response : [response];
+  }
+
+  private async getAnalyticsRules(
+    context: IExecuteFunctions,
+    client: Client,
+    credentials: TypesenseCredentials,
+    itemIndex: number,
+  ): Promise<IDataObject[]> {
+    const ruleTag = this.getOptional(context, 'ruleTag', itemIndex, '');
+
+    const response = await this.makeAnalyticsRequest(
+      context,
+      credentials,
+      'GET',
+      '/analytics/rules',
+      undefined,
+      ruleTag ? { rule_tag: ruleTag } : undefined,
+    );
+
+    return Array.isArray(response) ? response : [response];
+  }
+
+  private async getAnalyticsRule(
+    context: IExecuteFunctions,
+    client: Client,
+    credentials: TypesenseCredentials,
     itemIndex: number,
   ): Promise<IDataObject> {
-    const filterBy = this.getOptional(context, 'filterBy', itemIndex, '');
+    const ruleName = this.validateRequired(context, 'ruleName', itemIndex);
 
-    // Simulate delete operation
-    const response = await client.multiSearch.perform({
-      searches: [
-        {
-          collection: 'analytics_events',
-          q: '*',
-          filter_by: filterBy,
-          limit: 1000, // Get events to delete
-        },
-      ],
-    });
+    const response = await this.makeAnalyticsRequest(
+      context,
+      credentials,
+      'GET',
+      `/analytics/rules/${encodeURIComponent(ruleName)}`,
+    );
 
-    return {
-      success: true,
-      deleted_count: (response as any).results?.[0]?.hits?.length || 0,
-      filter: filterBy,
-      timestamp: new Date().toISOString(),
-    } as IDataObject;
+    return response as IDataObject;
   }
 
-  private async getPopularQueries(
+  private async updateAnalyticsRule(
     context: IExecuteFunctions,
-    client: any,
+    client: Client,
+    credentials: TypesenseCredentials,
     itemIndex: number,
-  ): Promise<IDataObject[]> {
-    const collection = this.validateRequired(context, 'collection', itemIndex);
-    const limit = this.getNumber(context, 'limit', itemIndex, 50);
+  ): Promise<IDataObject> {
+    const ruleName = this.validateRequired(context, 'ruleName', itemIndex);
+    const ruleJson = this.validateRequired(context, 'ruleJson', itemIndex);
 
-    const response = await client.collections(collection).documents().search({
-      q: '',
-      sort_by: 'popularity:desc',
-      limit,
-    });
+    let ruleData: IDataObject;
+    try {
+      ruleData = jsonParse<IDataObject>(ruleJson);
+    } catch {
+      throw new NodeOperationError(context.getNode(), 'Rule JSON must be valid JSON.', {
+        itemIndex,
+      });
+    }
 
-    return [response as IDataObject];
+    const response = await this.makeAnalyticsRequest(
+      context,
+      credentials,
+      'PUT',
+      `/analytics/rules/${encodeURIComponent(ruleName)}`,
+      ruleData,
+    );
+
+    return response as IDataObject;
   }
 
-  private async getNoResultsQueries(
+  private async deleteAnalyticsRule(
     context: IExecuteFunctions,
-    client: any,
+    client: Client,
+    credentials: TypesenseCredentials,
     itemIndex: number,
-  ): Promise<IDataObject[]> {
-    const collection = this.validateRequired(context, 'collection', itemIndex);
-    const limit = this.getNumber(context, 'limit', itemIndex, 50);
+  ): Promise<IDataObject> {
+    const ruleName = this.validateRequired(context, 'ruleName', itemIndex);
 
-    const response = await client.collections(collection).documents().search({
-      q: '',
-      filter_by: 'result_count:=0',
-      limit,
-    });
+    const response = await this.makeAnalyticsRequest(
+      context,
+      credentials,
+      'DELETE',
+      `/analytics/rules/${encodeURIComponent(ruleName)}`,
+    );
 
-    return [response as IDataObject];
-  }
-
-  private processSuggestionsParameters(params: IDataObject): IDataObject {
-    const processed: IDataObject = {};
-
-    if (params.prefix) {
-      processed.prefix = params.prefix;
-    }
-
-    if (params.infix) {
-      processed.infix = params.infix;
-    }
-
-    if (params.suggestionLimit !== undefined) {
-      processed.limit = params.suggestionLimit;
-    }
-
-    if (params.includeGroups) {
-      processed.group_by = params.groupBy || 'collection';
-    }
-
-    return processed;
+    return response as IDataObject;
   }
 }

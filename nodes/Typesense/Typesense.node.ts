@@ -16,6 +16,9 @@ import { searchOperations, searchFields } from './descriptions/SearchDescription
 import { analyticsOperations, analyticsFields } from './descriptions/AnalyticsDescription';
 import { apiKeyOperations, apiKeyFields } from './descriptions/APIKeyDescription';
 import { aliasOperations, aliasFields } from './descriptions/AliasDescription';
+import { synonymOperations, synonymFields } from './descriptions/SynonymDescription';
+import { overrideOperations, overrideFields } from './descriptions/OverrideDescription';
+import { conversationOperations, conversationFields } from './descriptions/ConversationDescription';
 
 export class Typesense implements INodeType {
   description: INodeTypeDescription = {
@@ -65,6 +68,15 @@ export class Typesense implements INodeType {
       // Alias operations and fields
       ...aliasOperations,
       ...aliasFields,
+      // Synonym operations and fields
+      ...synonymOperations,
+      ...synonymFields,
+      // Override operations and fields
+      ...overrideOperations,
+      ...overrideFields,
+      // Conversation operations and fields
+      ...conversationOperations,
+      ...conversationFields,
     ],
   };
 
