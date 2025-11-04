@@ -1,4 +1,4 @@
-import type { IDataObject, IExecuteFunctions, INodeProperties } from 'n8n-workflow';
+import type { IDataObject, IExecuteFunctions, INodeProperties, JsonObject } from 'n8n-workflow';
 import { NodeApiError, NodeOperationError, jsonParse } from 'n8n-workflow';
 import type Client from 'typesense/lib/Typesense/Client';
 
@@ -54,138 +54,9 @@ export class SynonymResource extends BaseTypesenseResource {
   }
 
   getFields(): INodeProperties[] {
-    return [
-      {
-        displayName: 'Synonym Set Name',
-        name: 'synonymSetName',
-        type: 'string',
-        default: '',
-        required: true,
-        displayOptions: {
-          show: {
-            resource: ['synonym'],
-            operation: ['create', 'delete', 'get'],
-          },
-        },
-        description: 'Name of the synonym set to operate on',
-      },
-      {
-        displayName: 'JSON Input',
-        name: 'jsonInput',
-        type: 'boolean',
-        default: false,
-        displayOptions: {
-          show: {
-            resource: ['synonym'],
-            operation: ['create'],
-          },
-        },
-        description: 'Whether to provide the synonym set as raw JSON',
-      },
-      {
-        displayName: 'Synonym Set (JSON)',
-        name: 'synonymSetJson',
-        type: 'string',
-        typeOptions: {
-          rows: 10,
-        },
-        default: '',
-        displayOptions: {
-          show: {
-            resource: ['synonym'],
-            operation: ['create'],
-            jsonInput: [true],
-          },
-        },
-        description:
-          'Synonym set as JSON. Must include "items" array with objects containing "id" and "synonyms" fields.',
-      },
-      {
-        displayName: 'Synonym Items',
-        name: 'synonymItems',
-        type: 'fixedCollection',
-        default: [],
-        typeOptions: {
-          multipleValues: true,
-        },
-        displayOptions: {
-          show: {
-            resource: ['synonym'],
-            operation: ['create'],
-            jsonInput: [false],
-          },
-        },
-        description: 'Array of synonym items',
-        options: [
-          {
-            name: 'item',
-            displayName: 'Item',
-            values: [
-              {
-                displayName: 'ID',
-                name: 'id',
-                type: 'string',
-                default: '',
-                required: true,
-                description: 'Unique identifier for the synonym item',
-              },
-              {
-                displayName: 'Synonyms',
-                name: 'synonyms',
-                type: 'string',
-                default: '',
-                required: true,
-                description: 'Comma-separated list of words that should be considered as synonyms',
-              },
-              {
-                displayName: 'Root',
-                name: 'root',
-                type: 'string',
-                default: '',
-                description: 'For 1-way synonyms, the root word that synonyms map to',
-              },
-              {
-                displayName: 'Locale',
-                name: 'locale',
-                type: 'string',
-                default: '',
-                description: 'Locale for the synonym (leave blank for standard tokenizer)',
-              },
-            ],
-          },
-        ],
-      },
-      {
-        displayName: 'Return All',
-        name: 'returnAll',
-        type: 'boolean',
-        default: true,
-        displayOptions: {
-          show: {
-            resource: ['synonym'],
-            operation: ['getAll'],
-          },
-        },
-      },
-      {
-        displayName: 'Limit',
-        name: 'limit',
-        type: 'number',
-        default: 50,
-        typeOptions: {
-          minValue: 1,
-          maxValue: 200,
-        },
-        displayOptions: {
-          show: {
-            resource: ['synonym'],
-            operation: ['getAll'],
-            returnAll: [false],
-          },
-        },
-        description: 'Maximum number of synonym sets to retrieve',
-      },
-    ];
+    // Fields for this resource are defined in nodes/Typesense/descriptions/SynonymDescription.ts
+    // Return an empty array here to avoid duplicating or conflicting definitions.
+    return [];
   }
 
   async execute(
@@ -220,7 +91,7 @@ export class SynonymResource extends BaseTypesenseResource {
       if (context.continueOnFail()) {
         return { error: (error as Error).message };
       }
-      throw new NodeApiError(context.getNode(), error as any, { itemIndex });
+      throw new NodeApiError(context.getNode(), error as JsonObject, { itemIndex });
     }
   }
 
@@ -229,6 +100,7 @@ export class SynonymResource extends BaseTypesenseResource {
     client: Client,
     itemIndex: number,
   ): Promise<IDataObject> {
+    const collection = this.validateRequired(context, 'collection', itemIndex);
     const synonymSetName = this.validateRequired(context, 'synonymSetName', itemIndex);
     const useJson = this.getBoolean(context, 'jsonInput', itemIndex);
 
@@ -243,59 +115,50 @@ export class SynonymResource extends BaseTypesenseResource {
           itemIndex,
         });
       }
-
-      if (!Array.isArray(synonymSetData.items)) {
-        throw new NodeOperationError(
-          context.getNode(),
-          'Synonym set JSON must include an "items" array.',
-          { itemIndex },
-        );
-      }
     } else {
-      const synonymItems = this.getArray(context, 'synonymItems', itemIndex, []) as unknown as IDataObject[];
-      if (synonymItems.length === 0) {
+      const synonymsString = this.validateRequired(context, 'synonyms', itemIndex);
+      const synonymsArray = synonymsString
+        .split(',')
+        .map((s: string) => s.trim())
+        .filter((s: string) => s.length > 0);
+
+      if (synonymsArray.length === 0) {
         throw new NodeOperationError(
           context.getNode(),
-          'Please provide at least one synonym item.',
+          'Synonyms must have at least one non-empty value.',
           { itemIndex },
         );
       }
 
       synonymSetData = {
-        items: synonymItems.map((item: IDataObject) => {
-          const synonymsArray = (item.synonyms as string)
+        synonyms: synonymsArray,
+      };
+
+      const additionalOptions = this.getObject(context, 'additionalOptions', itemIndex);
+      if (additionalOptions) {
+        if (additionalOptions.root) {
+          synonymSetData.root = additionalOptions.root as string;
+        }
+        if (additionalOptions.locale) {
+          synonymSetData.locale = additionalOptions.locale as string;
+        }
+        if (additionalOptions.symbols_to_index) {
+          const symbolsArray = (additionalOptions.symbols_to_index as string)
             .split(',')
             .map((s: string) => s.trim())
             .filter((s: string) => s.length > 0);
-
-          if (synonymsArray.length === 0) {
-            throw new NodeOperationError(
-              context.getNode(),
-              'Each synonym item must have at least one non-empty synonym.',
-              { itemIndex },
-            );
+          if (symbolsArray.length > 0) {
+            synonymSetData.symbols_to_index = symbolsArray;
           }
-
-          const itemData: IDataObject = {
-            id: item.id as string,
-            synonyms: synonymsArray,
-          };
-
-          if (item.root) {
-            itemData.root = item.root as string;
-          }
-
-          if (item.locale) {
-            itemData.locale = item.locale as string;
-          }
-
-          return itemData;
-        }),
-      };
+        }
+      }
     }
 
-    const response = await (client as unknown as any).synonyms(synonymSetName).upsert(synonymSetData);
-    return response as IDataObject;
+    const response = await client
+      .collections(collection)
+      .synonyms()
+      .upsert(synonymSetName, synonymSetData as IDataObject & { synonyms: string[] });
+    return response as unknown as IDataObject;
   }
 
   private async deleteSynonymSet(
@@ -303,9 +166,10 @@ export class SynonymResource extends BaseTypesenseResource {
     client: Client,
     itemIndex: number,
   ): Promise<IDataObject> {
+    const collection = this.validateRequired(context, 'collection', itemIndex);
     const synonymSetName = this.validateRequired(context, 'synonymSetName', itemIndex);
-    const response = await (client as unknown as any).synonyms(synonymSetName).delete();
-    return response as IDataObject;
+    const response = await client.collections(collection).synonyms(synonymSetName).delete();
+    return response as unknown as IDataObject;
   }
 
   private async getSynonymSet(
@@ -313,9 +177,10 @@ export class SynonymResource extends BaseTypesenseResource {
     client: Client,
     itemIndex: number,
   ): Promise<IDataObject> {
+    const collection = this.validateRequired(context, 'collection', itemIndex);
     const synonymSetName = this.validateRequired(context, 'synonymSetName', itemIndex);
-    const response = await (client as unknown as any).synonyms(synonymSetName).retrieve();
-    return response as IDataObject;
+    const response = await client.collections(collection).synonyms(synonymSetName).retrieve();
+    return response as unknown as IDataObject;
   }
 
   private async getAllSynonymSets(
@@ -323,13 +188,14 @@ export class SynonymResource extends BaseTypesenseResource {
     client: Client,
     itemIndex: number,
   ): Promise<IDataObject[]> {
+    const collection = this.validateRequired(context, 'collection', itemIndex);
     const returnAll = this.getBoolean(context, 'returnAll', itemIndex, true);
     const limit = this.getNumber(context, 'limit', itemIndex, 50);
 
-    const response = await (client as unknown as any).synonyms().retrieve();
+    const response = await client.collections(collection).synonyms().retrieve();
 
-    // API returns { synonym_sets: [...] }
-    const synonymSets = (response as IDataObject).synonym_sets as IDataObject[] || [];
+    // API returns { synonyms: [...] }
+    const synonymSets = (response as unknown as IDataObject).synonyms as IDataObject[] || [];
 
     if (returnAll) {
       return synonymSets;

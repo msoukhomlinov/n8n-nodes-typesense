@@ -1,5 +1,6 @@
-import type { IDataObject, IExecuteFunctions, INodeProperties } from 'n8n-workflow';
-import { NodeApiError, NodeOperationError, jsonParse } from 'n8n-workflow';
+import type { IDataObject, IExecuteFunctions, INodeProperties, JsonObject } from 'n8n-workflow';
+import { NodeApiError, NodeOperationError } from 'n8n-workflow';
+import type Client from 'typesense/lib/Typesense/Client';
 
 import { BaseTypesenseResource } from './BaseTypesenseResource';
 import { getTypesenseClient } from '../GenericFunctions';
@@ -33,12 +34,6 @@ export class SearchResource extends BaseTypesenseResource {
             value: 'multiSearch',
             action: 'Multi-search',
             description: 'Execute multiple search requests in a single API call',
-          },
-          {
-            name: 'Search with Conversation',
-            value: 'searchWithConversation',
-            action: 'Search with conversation',
-            description: 'Search with conversational context',
           },
           {
             name: 'Vector Search',
@@ -598,9 +593,6 @@ export class SearchResource extends BaseTypesenseResource {
         case 'multiSearch':
           return await this.performMultiSearch(context, client, itemIndex);
 
-        case 'searchWithConversation':
-          return await this.performSearchWithConversation(context, client, itemIndex);
-
         case 'vectorSearch':
           return await this.performVectorSearch(context, client, itemIndex);
 
@@ -621,27 +613,29 @@ export class SearchResource extends BaseTypesenseResource {
       if (context.continueOnFail()) {
         return { error: (error as Error).message };
       }
-      throw new NodeApiError(context.getNode(), error as any, { itemIndex });
+      throw new NodeApiError(context.getNode(), error as JsonObject, { itemIndex });
     }
   }
 
   private async performSearch(
     context: IExecuteFunctions,
-    client: any,
+    client: Client,
     itemIndex: number,
   ): Promise<IDataObject[]> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const query = this.validateRequired(context, 'query', itemIndex);
 
     const searchParams = this.buildSearchParameters(context, itemIndex);
+    // Typesense requires `q` for text searches
+    (searchParams as IDataObject).q = query;
 
     const response = await client.collections(collection).documents().search(searchParams);
-    return [response as IDataObject];
+    return [response as unknown as IDataObject];
   }
 
   private async performMultiSearch(
     context: IExecuteFunctions,
-    client: any,
+    client: Client,
     itemIndex: number,
   ): Promise<IDataObject[]> {
     const collections = this.validateRequired(context, 'collections', itemIndex);
@@ -661,24 +655,7 @@ export class SearchResource extends BaseTypesenseResource {
     return [response as IDataObject];
   }
 
-  private async performSearchWithConversation(
-    context: IExecuteFunctions,
-    client: any,
-    itemIndex: number,
-  ): Promise<IDataObject[]> {
-    const collection = this.validateRequired(context, 'collection', itemIndex);
-    const query = this.validateRequired(context, 'query', itemIndex);
-    const conversation = this.getOptional(context, 'conversation', itemIndex, '');
-
-    const searchParams = this.buildSearchParameters(context, itemIndex);
-
-    if (conversation) {
-      searchParams.conversation = conversation;
-    }
-
-    const response = await client.collections(collection).documents().search(searchParams);
-    return [response as IDataObject];
-  }
+  // searchWithConversation removed; conversation is a regular parameter of Search
 
   private buildSearchParameters(context: IExecuteFunctions, itemIndex: number): IDataObject {
     const params: IDataObject = {};
@@ -733,10 +710,36 @@ export class SearchResource extends BaseTypesenseResource {
     }
 
     // Advanced search parameters
-    const searchParameters = this.getObject(context, 'searchParameters', itemIndex);
-    if (searchParameters) {
-      Object.assign(params, this.processAdvancedSearchParameters(searchParameters));
+    // Backward compatibility: legacy bucket
+    const legacySearchParams = this.getObject(context, 'searchParameters', itemIndex);
+    if (legacySearchParams) {
+      Object.assign(params, this.processAdvancedSearchParameters(legacySearchParams));
     }
+
+    // New grouped option buckets
+    const typoTolerance = this.getObject(context, 'typoTolerance', itemIndex);
+    if (typoTolerance) Object.assign(params, this.buildTypoToleranceParams(typoTolerance));
+
+    const ranking = this.getObject(context, 'ranking', itemIndex);
+    if (ranking) Object.assign(params, this.buildRankingParams(ranking));
+
+    const highlighting = this.getObject(context, 'highlighting', itemIndex);
+    if (highlighting) Object.assign(params, this.buildHighlightingParams(highlighting));
+
+    const faceting = this.getObject(context, 'faceting', itemIndex);
+    if (faceting) Object.assign(params, this.buildFacetingParams(faceting));
+
+    const grouping = this.getObject(context, 'grouping', itemIndex);
+    if (grouping) Object.assign(params, this.buildGroupingParams(grouping));
+
+    const caching = this.getObject(context, 'caching', itemIndex);
+    if (caching) Object.assign(params, this.buildCachingParams(caching));
+
+    const advanced = this.getObject(context, 'advanced', itemIndex);
+    if (advanced) Object.assign(params, this.buildAdvancedParams(advanced));
+
+    const filterOptions = this.getObject(context, 'filterOptions', itemIndex);
+    if (filterOptions) Object.assign(params, this.buildFilterParams(filterOptions));
 
     return params;
   }
@@ -798,9 +801,127 @@ export class SearchResource extends BaseTypesenseResource {
     return processed;
   }
 
+  private buildTypoToleranceParams(params: IDataObject): IDataObject {
+    const p: IDataObject = {};
+    if (params.prefix !== undefined) p.prefix = params.prefix;
+    if (params.infix !== undefined) p.infix = params.infix;
+    if (params.enableTypoTolerance !== undefined)
+      p.enable_typo_tolerance = params.enableTypoTolerance;
+    if (params.numTypos !== undefined) p.num_typos = params.numTypos;
+    if (params.minLengthFor1Typo !== undefined) p.min_len_1typo = params.minLengthFor1Typo;
+    if (params.minLengthFor2Typos !== undefined) p.min_len_2typo = params.minLengthFor2Typos;
+    if (params.typoTokensThreshold !== undefined)
+      p.typo_tokens_threshold = params.typoTokensThreshold;
+    if (params.dropTokensThreshold !== undefined)
+      p.drop_tokens_threshold = params.dropTokensThreshold;
+    if (params.dropTokensMode) p.drop_tokens_mode = params.dropTokensMode;
+    if (params.splitJoinTokens) p.split_join_tokens = params.splitJoinTokens;
+    if (params.enableTyposForNumericalTokens !== undefined)
+      p.enable_typos_for_numerical_tokens = params.enableTyposForNumericalTokens;
+    if (params.enableTyposForAlphaNumericalTokens !== undefined)
+      p.enable_typos_for_alpha_numerical_tokens = params.enableTyposForAlphaNumericalTokens;
+    if (params.synonymNumTypos !== undefined) p.synonym_num_typos = params.synonymNumTypos;
+    return p;
+  }
+
+  private buildRankingParams(params: IDataObject): IDataObject {
+    const p: IDataObject = {};
+    if (params.queryByWeights) p.query_by_weights = params.queryByWeights;
+    if (params.textMatchType) p.text_match_type = params.textMatchType;
+    if (params.prioritizeExactMatch !== undefined)
+      p.prioritize_exact_match = params.prioritizeExactMatch;
+    if (params.prioritizeTokenPosition !== undefined)
+      p.prioritize_token_position = params.prioritizeTokenPosition;
+    if (params.prioritizeNumMatchingFields !== undefined)
+      p.prioritize_num_matching_fields = params.prioritizeNumMatchingFields;
+    if (params.pinnedHits) p.pinned_hits = params.pinnedHits;
+    if (params.hiddenHits) p.hidden_hits = params.hiddenHits;
+    if (params.filterCuratedHits !== undefined)
+      p.filter_curated_hits = params.filterCuratedHits;
+    if (params.enableOverrides !== undefined) p.enable_overrides = params.enableOverrides;
+    if (params.overrideTags) p.override_tags = params.overrideTags;
+    if (params.enableSynonyms !== undefined) p.enable_synonyms = params.enableSynonyms;
+    if (params.synonymPrefix !== undefined) p.synonym_prefix = params.synonymPrefix;
+    if (params.maxCandidates !== undefined) p.max_candidates = params.maxCandidates;
+    if (params.exhaustiveSearch !== undefined) p.exhaustive_search = params.exhaustiveSearch;
+    return p;
+  }
+
+  private buildHighlightingParams(params: IDataObject): IDataObject {
+    const p: IDataObject = {};
+    if (params.highlightFields) p.highlight_fields = params.highlightFields;
+    if (params.enableHighlighting !== undefined)
+      p.enable_highlighting = params.enableHighlighting;
+    if (params.highlightFullFields) p.highlight_full_fields = params.highlightFullFields;
+    if (params.highlightAffixNumTokens !== undefined)
+      p.highlight_affix_num_tokens = params.highlightAffixNumTokens;
+    if (params.highlightStartTag) p.highlight_start_tag = params.highlightStartTag;
+    if (params.highlightEndTag) p.highlight_end_tag = params.highlightEndTag;
+    if (params.enableHighlightV1 !== undefined)
+      p.enable_highlight_v1 = params.enableHighlightV1;
+    if (params.snippetThreshold !== undefined) p.snippet_threshold = params.snippetThreshold;
+    return p;
+  }
+
+  private buildFacetingParams(params: IDataObject): IDataObject {
+    const p: IDataObject = {};
+    if (params.facetBy) p.facet_by = params.facetBy;
+    if (params.facetStrategy) p.facet_strategy = params.facetStrategy;
+    if (params.maxFacetValues !== undefined) p.max_facet_values = params.maxFacetValues;
+    if (params.facetQuery) p.facet_query = params.facetQuery;
+    if (params.facetQueryNumTypos !== undefined)
+      p.facet_query_num_typos = params.facetQueryNumTypos;
+    if (params.facetReturnParent) p.facet_return_parent = params.facetReturnParent;
+    if (params.facetSamplePercent !== undefined)
+      p.facet_sample_percent = params.facetSamplePercent;
+    if (params.facetSampleThreshold !== undefined)
+      p.facet_sample_threshold = params.facetSampleThreshold;
+    return p;
+  }
+
+  private buildGroupingParams(params: IDataObject): IDataObject {
+    const p: IDataObject = {};
+    if (params.groupBy) p.group_by = params.groupBy;
+    if (params.groupLimit !== undefined) p.group_limit = params.groupLimit;
+    if (params.groupMissingValues !== undefined)
+      p.group_missing_values = params.groupMissingValues;
+    return p;
+  }
+
+  private buildCachingParams(params: IDataObject): IDataObject {
+    const p: IDataObject = {};
+    if (params.useCache !== undefined) p.use_cache = params.useCache;
+    if (params.cacheTtl !== undefined) p.cache_ttl = params.cacheTtl;
+    return p;
+  }
+
+  private buildAdvancedParams(params: IDataObject): IDataObject {
+    const p: IDataObject = {};
+    if (params.preSegmentedQuery !== undefined) p.pre_segmented_query = params.preSegmentedQuery;
+    if (params.preset) p.preset = params.preset;
+    if (params.stopwords) p.stopwords = params.stopwords;
+    if (params.validateFieldNames !== undefined)
+      p.validate_field_names = params.validateFieldNames;
+    if (params.limitHits !== undefined) p.limit_hits = params.limitHits;
+    if (params.searchCutoffMs !== undefined) p.search_cutoff_ms = params.searchCutoffMs;
+    if (params.conversation) p.conversation = params.conversation;
+    // Vector/voice in advanced (if provided here)
+    if (params.vectorQuery) p.vector_query = params.vectorQuery;
+    if (params.voiceQuery) p.voice_query = params.voiceQuery;
+    return p;
+  }
+
+  private buildFilterParams(params: IDataObject): IDataObject {
+    const p: IDataObject = {};
+    if (params.enableLazyFilter !== undefined) p.enable_lazy_filter = params.enableLazyFilter;
+    if (params.maxFilterByCandidates !== undefined)
+      p.max_filter_by_candidates = params.maxFilterByCandidates;
+    return p;
+  }
+
   private async performVectorSearch(
     context: IExecuteFunctions,
-    client: any,
+    client: Client,
     itemIndex: number,
   ): Promise<IDataObject[]> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
@@ -828,23 +949,17 @@ export class SearchResource extends BaseTypesenseResource {
     Object.assign(searchParams, this.buildSearchParameters(context, itemIndex));
 
     const response = await client.collections(collection).documents().search(searchParams);
-    return [response as IDataObject];
+    return [response as unknown as IDataObject];
   }
 
   private async performSemanticSearch(
     context: IExecuteFunctions,
-    client: any,
+    client: Client,
     itemIndex: number,
   ): Promise<IDataObject[]> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const semanticQuery = this.validateRequired(context, 'semanticQuery', itemIndex);
     const vectorField = this.getOptional(context, 'vectorField', itemIndex, 'embedding');
-    const modelName = this.getOptional(
-      context,
-      'modelName',
-      itemIndex,
-      'openai/text-embedding-ada-002',
-    );
 
     const searchParams: IDataObject = {
       q: semanticQuery,
@@ -856,16 +971,16 @@ export class SearchResource extends BaseTypesenseResource {
     Object.assign(searchParams, this.buildSearchParameters(context, itemIndex));
 
     const response = await client.collections(collection).documents().search(searchParams);
-    return [response as IDataObject];
+    return [response as unknown as IDataObject];
   }
 
   private async performAdvancedSearch(
     context: IExecuteFunctions,
-    client: any,
+    client: Client,
     itemIndex: number,
   ): Promise<IDataObject[]> {
     const collection = this.validateRequired(context, 'collection', itemIndex);
-    const query = this.validateRequired(context, 'query', itemIndex);
+    this.validateRequired(context, 'query', itemIndex);
 
     const searchParams = this.buildSearchParameters(context, itemIndex);
 
@@ -876,7 +991,7 @@ export class SearchResource extends BaseTypesenseResource {
     }
 
     const response = await client.collections(collection).documents().search(searchParams);
-    return [response as IDataObject];
+    return [response as unknown as IDataObject];
   }
 
   private processAdvancedQueryParameters(params: IDataObject): IDataObject {

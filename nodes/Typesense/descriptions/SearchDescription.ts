@@ -51,7 +51,10 @@ export const searchFields: INodeProperties[] = [
   {
     displayName: 'Collection Name',
     name: 'collection',
-    type: 'string',
+    type: 'options',
+    typeOptions: {
+      loadOptionsMethod: 'getCollections',
+    },
     default: '',
     required: true,
     displayOptions: {
@@ -60,7 +63,7 @@ export const searchFields: INodeProperties[] = [
         operation: ['search', 'vectorSearch', 'semanticSearch', 'advancedSearch'],
       },
     },
-    description: 'Name of the collection to search in',
+    description: 'Select a collection from your Typesense instance',
   },
   {
     displayName: 'Collections',
@@ -73,7 +76,8 @@ export const searchFields: INodeProperties[] = [
         operation: ['multiSearch'],
       },
     },
-    description: 'Comma-separated list of collection names for multi-search',
+    description:
+      'Comma-separated list of collection names for multi-search. Use the Collection Name field above to see available collections.',
   },
   {
     displayName: 'Search Query',
@@ -92,15 +96,19 @@ export const searchFields: INodeProperties[] = [
   {
     displayName: 'Query By',
     name: 'queryBy',
-    type: 'string',
-    default: '',
+    type: 'multiOptions',
+    typeOptions: {
+      loadOptionsMethod: 'getFieldNames',
+      loadOptionsDependsOn: ['collection'],
+    },
+    default: [],
     displayOptions: {
       show: {
         resource: ['search'],
         operation: ['search', 'multiSearch', 'advancedSearch'],
       },
     },
-    description: 'Comma-separated list of fields to search in',
+    description: 'Fields to search in. Select multiple fields from your collection schema.',
   },
   {
     displayName: 'Filter By',
@@ -118,7 +126,11 @@ export const searchFields: INodeProperties[] = [
   {
     displayName: 'Sort By',
     name: 'sortBy',
-    type: 'string',
+    type: 'options',
+    typeOptions: {
+      loadOptionsMethod: 'getFieldNames',
+      loadOptionsDependsOn: ['collection'],
+    },
     default: '',
     displayOptions: {
       show: {
@@ -126,20 +138,25 @@ export const searchFields: INodeProperties[] = [
         operation: ['search', 'multiSearch', 'advancedSearch'],
       },
     },
-    description: 'Sort expression (e.g., num_employees:desc)',
+    description: 'Field to sort by. Add :asc or :desc after selecting (e.g., num_employees:desc).',
+    hint: 'You can manually add :asc or :desc to the field name',
   },
   {
     displayName: 'Facet By',
     name: 'facetBy',
-    type: 'string',
-    default: '',
+    type: 'multiOptions',
+    typeOptions: {
+      loadOptionsMethod: 'getFieldNames',
+      loadOptionsDependsOn: ['collection'],
+    },
+    default: [],
     displayOptions: {
       show: {
         resource: ['search'],
         operation: ['search', 'multiSearch', 'advancedSearch'],
       },
     },
-    description: 'Comma-separated list of fields to facet by',
+    description: 'Fields to facet by. Select multiple fields from your collection schema.',
   },
   {
     displayName: 'Vector Query',
@@ -158,7 +175,11 @@ export const searchFields: INodeProperties[] = [
   {
     displayName: 'Vector Field',
     name: 'vectorField',
-    type: 'string',
+    type: 'options',
+    typeOptions: {
+      loadOptionsMethod: 'getFieldNames',
+      loadOptionsDependsOn: ['collection'],
+    },
     default: 'embedding',
     displayOptions: {
       show: {
@@ -166,7 +187,7 @@ export const searchFields: INodeProperties[] = [
         operation: ['vectorSearch', 'semanticSearch'],
       },
     },
-    description: 'Name of the vector field to search in',
+    description: 'Select the vector field to search in',
   },
   {
     displayName: 'Semantic Query',
@@ -231,27 +252,234 @@ export const searchFields: INodeProperties[] = [
   {
     displayName: 'Include Fields',
     name: 'includeFields',
-    type: 'string',
-    default: '',
+    type: 'multiOptions',
+    typeOptions: {
+      loadOptionsMethod: 'getFieldNames',
+      loadOptionsDependsOn: ['collection'],
+    },
+    default: [],
     displayOptions: {
       show: {
         resource: ['search'],
         operation: ['search', 'multiSearch', 'vectorSearch', 'semanticSearch', 'advancedSearch'],
       },
     },
-    description: 'Comma-separated list of fields to include in results',
+    description: 'Fields to include in results. Leave empty to include all fields.',
   },
   {
     displayName: 'Exclude Fields',
     name: 'excludeFields',
-    type: 'string',
-    default: '',
+    type: 'multiOptions',
+    typeOptions: {
+      loadOptionsMethod: 'getFieldNames',
+      loadOptionsDependsOn: ['collection'],
+    },
+    default: [],
     displayOptions: {
       show: {
         resource: ['search'],
         operation: ['search', 'multiSearch', 'vectorSearch', 'semanticSearch', 'advancedSearch'],
       },
     },
-    description: 'Comma-separated list of fields to exclude from results',
+    description: 'Fields to exclude from results',
+  },
+  // Typo Tolerance Options
+  {
+    displayName: 'Typo Tolerance Options',
+    name: 'typoTolerance',
+    type: 'collection',
+    placeholder: 'Add Option',
+    default: {},
+    displayOptions: {
+      show: {
+        resource: ['search'],
+        operation: ['search', 'multiSearch', 'vectorSearch', 'semanticSearch', 'advancedSearch'],
+      },
+    },
+    options: [
+      { displayName: 'Prefix', name: 'prefix', type: 'string', default: '' },
+      { displayName: 'Infix', name: 'infix', type: 'string', default: '' },
+      { displayName: 'Enable Typo Tolerance', name: 'enableTypoTolerance', type: 'boolean', default: true },
+      { displayName: 'Num Typos', name: 'numTypos', type: 'number', default: 2, typeOptions: { minValue: 0, maxValue: 2 } },
+      { displayName: 'Min Length for 1 Typo', name: 'minLengthFor1Typo', type: 'number', default: 4, typeOptions: { minValue: 1 } },
+      { displayName: 'Min Length for 2 Typos', name: 'minLengthFor2Typos', type: 'number', default: 7, typeOptions: { minValue: 1 } },
+      { displayName: 'Typo Tokens Threshold', name: 'typoTokensThreshold', type: 'number', default: 1, typeOptions: { minValue: 0 } },
+      { displayName: 'Drop Tokens Threshold', name: 'dropTokensThreshold', type: 'number', default: 1, typeOptions: { minValue: 0 } },
+      {
+        displayName: 'Drop Tokens Mode',
+        name: 'dropTokensMode',
+        type: 'options',
+        options: [
+          { name: 'Right to Left', value: 'right_to_left' },
+          { name: 'Left to Right', value: 'left_to_right' },
+          { name: 'Both Sides', value: 'both_sides' },
+        ],
+        default: 'right_to_left',
+      },
+      { displayName: 'Split Join Tokens', name: 'splitJoinTokens', type: 'options', options: [ { name: 'Off', value: 'off' }, { name: 'Fallback', value: 'fallback' }, { name: 'Always', value: 'always' } ], default: 'fallback' },
+      { displayName: 'Enable Typos for Numerical Tokens', name: 'enableTyposForNumericalTokens', type: 'boolean', default: true },
+      { displayName: 'Enable Typos for Alphanumeric Tokens', name: 'enableTyposForAlphaNumericalTokens', type: 'boolean', default: true },
+      { displayName: 'Synonym Num Typos', name: 'synonymNumTypos', type: 'number', default: 0, typeOptions: { minValue: 0, maxValue: 2 } },
+    ],
+  },
+
+  // Ranking & Relevance
+  {
+    displayName: 'Ranking & Relevance',
+    name: 'ranking',
+    type: 'collection',
+    placeholder: 'Add Option',
+    default: {},
+    displayOptions: {
+      show: {
+        resource: ['search'],
+        operation: ['search', 'multiSearch', 'vectorSearch', 'semanticSearch', 'advancedSearch'],
+      },
+    },
+    options: [
+      { displayName: 'Query By Weights', name: 'queryByWeights', type: 'string', default: '' },
+      { displayName: 'Text Match Type', name: 'textMatchType', type: 'options', options: [ { name: 'Max Score', value: 'max_score' }, { name: 'Max Weight', value: 'max_weight' }, { name: 'Sum Score', value: 'sum_score' } ], default: 'max_score' },
+      { displayName: 'Prioritise Exact Match', name: 'prioritizeExactMatch', type: 'boolean', default: true },
+      { displayName: 'Prioritise Token Position', name: 'prioritizeTokenPosition', type: 'boolean', default: false },
+      { displayName: 'Prioritise Num Matching Fields', name: 'prioritizeNumMatchingFields', type: 'boolean', default: true },
+      { displayName: 'Pinned Hits', name: 'pinnedHits', type: 'string', default: '' },
+      { displayName: 'Hidden Hits', name: 'hiddenHits', type: 'string', default: '' },
+      { displayName: 'Filter Curated Hits', name: 'filterCuratedHits', type: 'boolean', default: false },
+      { displayName: 'Enable Overrides', name: 'enableOverrides', type: 'boolean', default: true },
+      { displayName: 'Override Tags', name: 'overrideTags', type: 'string', default: '' },
+      { displayName: 'Enable Synonyms', name: 'enableSynonyms', type: 'boolean', default: true },
+      { displayName: 'Synonym Prefix', name: 'synonymPrefix', type: 'boolean', default: false },
+      { displayName: 'Max Candidates', name: 'maxCandidates', type: 'number', default: 4, typeOptions: { minValue: 1 } },
+      { displayName: 'Exhaustive Search', name: 'exhaustiveSearch', type: 'boolean', default: false },
+    ],
+  },
+
+  // Highlighting
+  {
+    displayName: 'Highlighting',
+    name: 'highlighting',
+    type: 'collection',
+    placeholder: 'Add Option',
+    default: {},
+    displayOptions: {
+      show: {
+        resource: ['search'],
+        operation: ['search', 'multiSearch', 'vectorSearch', 'semanticSearch', 'advancedSearch'],
+      },
+    },
+    options: [
+      { displayName: 'Highlight Fields', name: 'highlightFields', type: 'string', default: '' },
+      { displayName: 'Enable Highlighting', name: 'enableHighlighting', type: 'boolean', default: true },
+      { displayName: 'Highlight Full Fields', name: 'highlightFullFields', type: 'string', default: '' },
+      { displayName: 'Highlight Affix Num Tokens', name: 'highlightAffixNumTokens', type: 'number', default: 4, typeOptions: { minValue: 0 } },
+      { displayName: 'Highlight Start Tag', name: 'highlightStartTag', type: 'string', default: '' },
+      { displayName: 'Highlight End Tag', name: 'highlightEndTag', type: 'string', default: '' },
+      { displayName: 'Enable Highlight v1', name: 'enableHighlightV1', type: 'boolean', default: true },
+      { displayName: 'Snippet Threshold', name: 'snippetThreshold', type: 'number', default: 30, typeOptions: { minValue: 0 } },
+    ],
+  },
+
+  // Faceting Options
+  {
+    displayName: 'Faceting Options',
+    name: 'faceting',
+    type: 'collection',
+    placeholder: 'Add Option',
+    default: {},
+    displayOptions: {
+      show: {
+        resource: ['search'],
+        operation: ['search', 'multiSearch', 'vectorSearch', 'semanticSearch', 'advancedSearch'],
+      },
+    },
+    options: [
+      { displayName: 'Facet Strategy', name: 'facetStrategy', type: 'options', options: [ { name: 'Automatic', value: 'automatic' }, { name: 'Exhaustive', value: 'exhaustive' }, { name: 'Top Values', value: 'top_values' } ], default: 'automatic' },
+      { displayName: 'Max Facet Values', name: 'maxFacetValues', type: 'number', default: 10, typeOptions: { minValue: 0 } },
+      { displayName: 'Facet Query', name: 'facetQuery', type: 'string', default: '' },
+      { displayName: 'Facet Query Num Typos', name: 'facetQueryNumTypos', type: 'number', default: 2, typeOptions: { minValue: 0, maxValue: 2 } },
+      { displayName: 'Facet Return Parent', name: 'facetReturnParent', type: 'string', default: '' },
+      { displayName: 'Facet Sample Percent', name: 'facetSamplePercent', type: 'number', default: 100, typeOptions: { minValue: 0, maxValue: 100 } },
+      { displayName: 'Facet Sample Threshold', name: 'facetSampleThreshold', type: 'number', default: 0, typeOptions: { minValue: 0 } },
+    ],
+  },
+
+  // Grouping Options
+  {
+    displayName: 'Grouping Options',
+    name: 'grouping',
+    type: 'collection',
+    placeholder: 'Add Option',
+    default: {},
+    displayOptions: {
+      show: {
+        resource: ['search'],
+        operation: ['search', 'multiSearch', 'vectorSearch', 'semanticSearch', 'advancedSearch'],
+      },
+    },
+    options: [
+      { displayName: 'Group Missing Values', name: 'groupMissingValues', type: 'boolean', default: true },
+    ],
+  },
+
+  // Filter Options
+  {
+    displayName: 'Filter Options',
+    name: 'filterOptions',
+    type: 'collection',
+    placeholder: 'Add Option',
+    default: {},
+    displayOptions: {
+      show: {
+        resource: ['search'],
+        operation: ['search', 'multiSearch', 'vectorSearch', 'semanticSearch', 'advancedSearch'],
+      },
+    },
+    options: [
+      { displayName: 'Enable Lazy Filter', name: 'enableLazyFilter', type: 'boolean', default: false },
+      { displayName: 'Max Filter By Candidates', name: 'maxFilterByCandidates', type: 'number', default: 4, typeOptions: { minValue: 1 } },
+    ],
+  },
+
+  // Caching
+  {
+    displayName: 'Caching',
+    name: 'caching',
+    type: 'collection',
+    placeholder: 'Add Option',
+    default: {},
+    displayOptions: {
+      show: {
+        resource: ['search'],
+        operation: ['search', 'multiSearch', 'vectorSearch', 'semanticSearch', 'advancedSearch'],
+      },
+    },
+    options: [
+      { displayName: 'Use Cache', name: 'useCache', type: 'boolean', default: false },
+      { displayName: 'Cache TTL (seconds)', name: 'cacheTtl', type: 'number', default: 60, typeOptions: { minValue: 1 } },
+    ],
+  },
+
+  // Advanced Options
+  {
+    displayName: 'Advanced Options',
+    name: 'advanced',
+    type: 'collection',
+    placeholder: 'Add Option',
+    default: {},
+    displayOptions: {
+      show: {
+        resource: ['search'],
+        operation: ['search', 'multiSearch', 'vectorSearch', 'semanticSearch', 'advancedSearch'],
+      },
+    },
+    options: [
+      { displayName: 'Preset', name: 'preset', type: 'string', default: '' },
+      { displayName: 'Pre-segmented Query', name: 'preSegmentedQuery', type: 'boolean', default: false },
+      { displayName: 'Stopwords', name: 'stopwords', type: 'string', default: '' },
+      { displayName: 'Validate Field Names', name: 'validateFieldNames', type: 'boolean', default: true },
+      { displayName: 'Conversation', name: 'conversation', type: 'string', default: '' },
+      { displayName: 'Limit Hits', name: 'limitHits', type: 'number', default: 0, typeOptions: { minValue: 0 } },
+      { displayName: 'Search Cutoff (ms)', name: 'searchCutoffMs', type: 'number', default: 0, typeOptions: { minValue: 0 } },
+    ],
   },
 ];

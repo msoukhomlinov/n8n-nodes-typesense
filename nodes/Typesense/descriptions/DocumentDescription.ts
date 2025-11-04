@@ -75,7 +75,10 @@ export const documentFields: INodeProperties[] = [
   {
     displayName: 'Collection Name',
     name: 'collection',
-    type: 'string',
+    type: 'options',
+    typeOptions: {
+      loadOptionsMethod: 'getCollections',
+    },
     default: '',
     required: true,
     displayOptions: {
@@ -84,7 +87,7 @@ export const documentFields: INodeProperties[] = [
         operation: ['create', 'delete', 'get', 'getAll', 'update', 'search', 'deleteByQuery', 'import', 'export'],
       },
     },
-    description: 'Name of the collection to operate on',
+    description: 'Select a collection from your Typesense instance',
   },
   {
     displayName: 'Document ID',
@@ -177,15 +180,19 @@ export const documentFields: INodeProperties[] = [
   {
     displayName: 'Query By',
     name: 'queryBy',
-    type: 'string',
-    default: '',
+    type: 'multiOptions',
+    typeOptions: {
+      loadOptionsMethod: 'getFieldNames',
+      loadOptionsDependsOn: ['collection'],
+    },
+    default: [],
     displayOptions: {
       show: {
         resource: ['document'],
         operation: ['search'],
       },
     },
-    description: 'Comma-separated list of fields to search in',
+    description: 'Fields to search in. Select multiple fields from your collection schema.',
   },
   {
     displayName: 'Filter By',
@@ -203,7 +210,11 @@ export const documentFields: INodeProperties[] = [
   {
     displayName: 'Sort By',
     name: 'sortBy',
-    type: 'string',
+    type: 'options',
+    typeOptions: {
+      loadOptionsMethod: 'getFieldNames',
+      loadOptionsDependsOn: ['collection'],
+    },
     default: '',
     displayOptions: {
       show: {
@@ -211,20 +222,25 @@ export const documentFields: INodeProperties[] = [
         operation: ['search', 'getAll'],
       },
     },
-    description: 'Sort expression (e.g., num_employees:desc)',
+    description: 'Field to sort by. Add :asc or :desc after selecting (e.g., num_employees:desc).',
+    hint: 'You can manually add :asc or :desc to the field name',
   },
   {
     displayName: 'Facet By',
     name: 'facetBy',
-    type: 'string',
-    default: '',
+    type: 'multiOptions',
+    typeOptions: {
+      loadOptionsMethod: 'getFieldNames',
+      loadOptionsDependsOn: ['collection'],
+    },
+    default: [],
     displayOptions: {
       show: {
         resource: ['document'],
         operation: ['search'],
       },
     },
-    description: 'Comma-separated list of fields to facet by',
+    description: 'Fields to facet by. Select multiple fields from your collection schema.',
   },
   {
     displayName: 'Return All',
@@ -275,28 +291,36 @@ export const documentFields: INodeProperties[] = [
   {
     displayName: 'Include Fields',
     name: 'includeFields',
-    type: 'string',
-    default: '',
+    type: 'multiOptions',
+    typeOptions: {
+      loadOptionsMethod: 'getFieldNames',
+      loadOptionsDependsOn: ['collection'],
+    },
+    default: [],
     displayOptions: {
       show: {
         resource: ['document'],
         operation: ['search', 'getAll'],
       },
     },
-    description: 'Comma-separated list of fields to include in results',
+    description: 'Fields to include in results. Leave empty to include all fields.',
   },
   {
     displayName: 'Exclude Fields',
     name: 'excludeFields',
-    type: 'string',
-    default: '',
+    type: 'multiOptions',
+    typeOptions: {
+      loadOptionsMethod: 'getFieldNames',
+      loadOptionsDependsOn: ['collection'],
+    },
+    default: [],
     displayOptions: {
       show: {
         resource: ['document'],
         operation: ['search', 'getAll'],
       },
     },
-    description: 'Comma-separated list of fields to exclude from results',
+    description: 'Fields to exclude from results',
   },
   {
     displayName: 'Documents Data (JSONL)',

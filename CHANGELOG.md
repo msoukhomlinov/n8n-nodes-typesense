@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2025-11-05
+
+### Changed
+- Analytics: Improved diagnostics for 404 responses on `/analytics/*` endpoints. A clear error now explains that Typesense Analytics is likely disabled and that the server must be started with `--analytics-dir` (v27.1+).
+ - Search: Aligned Search resource with Typesense v29.0
+   - Removed unsupported `searchWithConversation` operation; use `conversation` parameter in Search
+   - Added missing parameters (typo tolerance, ranking, highlighting, faceting, grouping, caching, advanced)
+   - Reorganised UI fields into logical groups for discoverability
+ - Collection: Aligned with Typesense v29.0 Collections API
+   - Removed unsupported options from create UI (`synonymSets`, `voiceQueryModelJson`)
+   - Added missing field types: `geopoint[]`, `geopolygon`
+   - Eliminated duplicated UI definitions in resource (now sourced from descriptions only)
+
+
 ## [1.0.0] - 2025-11-04
 
 ### Added
@@ -21,6 +35,7 @@ All notable changes to this project will be documented in this file.
 - **API Key Resource**: Full CRUD+Update operations for API key management
 - **Alias Resource**: Full CRUD+Update operations for collection aliases
 - **Synonym Resource**: Full CRUD operations for managing synonym sets
+  - Added `symbols_to_index` field for indexing special characters in synonyms
 - **Search Override Resource**: Full CRUD operations for curating search results
   - Configure rules with exact or contains matching
   - Include/exclude specific documents at positions

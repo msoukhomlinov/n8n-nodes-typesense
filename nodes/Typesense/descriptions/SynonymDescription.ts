@@ -43,6 +43,41 @@ export const synonymOperations: INodeProperties[] = [
 
 export const synonymFields: INodeProperties[] = [
   {
+    displayName: 'Collection Name',
+    name: 'collection',
+    type: 'options',
+    typeOptions: {
+      loadOptionsMethod: 'getCollections',
+    },
+    default: '',
+    required: true,
+    displayOptions: {
+      show: {
+        resource: ['synonym'],
+        operation: ['create', 'delete', 'get', 'getAll'],
+      },
+    },
+    description: 'Select a collection from your Typesense instance',
+  },
+  {
+    displayName: 'Synonym Set Name',
+    name: 'synonymSetName',
+    type: 'options',
+    typeOptions: {
+      loadOptionsMethod: 'getSynonymSets',
+      loadOptionsDependsOn: ['collection'],
+    },
+    default: '',
+    required: true,
+    displayOptions: {
+      show: {
+        resource: ['synonym'],
+        operation: ['delete', 'get'],
+      },
+    },
+    description: 'Select an existing synonym set',
+  },
+  {
     displayName: 'Synonym Set Name',
     name: 'synonymSetName',
     type: 'string',
@@ -51,10 +86,10 @@ export const synonymFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['synonym'],
-        operation: ['create', 'delete', 'get'],
+        operation: ['create'],
       },
     },
-    description: 'Name of the synonym set to operate on',
+    description: 'Name for the new synonym set',
   },
   {
     displayName: 'JSON Input',
@@ -85,16 +120,14 @@ export const synonymFields: INodeProperties[] = [
       },
     },
     description:
-      'Synonym set as JSON. Must include "items" array with objects containing "id" and "synonyms" fields.',
+      'Synonym set as JSON. Example: {"synonyms": ["blazer", "coat", "jacket"]} or {"root": "smart phone", "synonyms": ["iphone", "android"]}',
   },
   {
-    displayName: 'Synonym Items',
-    name: 'synonymItems',
-    type: 'fixedCollection',
-    default: [],
-    typeOptions: {
-      multipleValues: true,
-    },
+    displayName: 'Synonyms',
+    name: 'synonyms',
+    type: 'string',
+    default: '',
+    required: true,
     displayOptions: {
       show: {
         resource: ['synonym'],
@@ -102,44 +135,47 @@ export const synonymFields: INodeProperties[] = [
         jsonInput: [false],
       },
     },
-    description: 'Array of synonym items',
+    description: 'Comma-separated list of words to be treated as synonyms (multi-way).',
+    placeholder: 'Microsoft 365, M365, Office 365',
+  },
+  {
+    displayName: 'Additional Options',
+    name: 'additionalOptions',
+    type: 'collection',
+    default: {},
+    displayOptions: {
+      show: {
+        resource: ['synonym'],
+        operation: ['create'],
+        jsonInput: [false],
+      },
+    },
     options: [
       {
-        name: 'item',
-        displayName: 'Item',
-        values: [
-          {
-            displayName: 'ID',
-            name: 'id',
-            type: 'string',
-            default: '',
-            required: true,
-            description: 'Unique identifier for the synonym item',
-          },
-          {
-            displayName: 'Synonyms',
-            name: 'synonyms',
-            type: 'string',
-            default: '',
-            required: true,
-            description: 'Comma-separated list of words that should be considered as synonyms',
-          },
-          {
-            displayName: 'Root',
-            name: 'root',
-            type: 'string',
-            default: '',
-            description: 'For 1-way synonyms, the root word that synonyms map to',
-          },
-          {
-            displayName: 'Locale',
-            name: 'locale',
-            type: 'string',
-            default: '',
-            description: 'Locale for the synonym (leave blank for standard tokenizer)',
-          },
-        ],
+        displayName: 'Root',
+        name: 'root',
+        type: 'string',
+        default: '',
+        description: 'For one-way synonyms, the query term that should expand to the values in Synonyms. Example: root "smart phone" with synonyms "iphone, android" makes "smart phone" match docs with "iphone" or "android" (not vice versa).',
+        placeholder: 'smart phone',
       },
+      {
+        displayName: 'Locale',
+        name: 'locale',
+        type: 'string',
+        default: '',
+        description: 'Locale for tokenization and matching (leave blank for global application).',
+        placeholder: 'en',
+      },
+          {
+            displayName: 'Symbols to Index',
+            name: 'symbols_to_index',
+            type: 'string',
+            default: '',
+            description:
+              'Comma-separated special characters to index as-is (by default, special characters are dropped). Example: +, &, @',
+            placeholder: '+, &, @',
+          },
     ],
   },
   {

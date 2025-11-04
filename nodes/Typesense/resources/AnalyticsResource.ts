@@ -1,4 +1,4 @@
-import type { IDataObject, IExecuteFunctions, INodeProperties, JsonObject } from 'n8n-workflow';
+import type { IDataObject, IExecuteFunctions, INodeProperties, JsonObject, IHttpRequestOptions, IHttpRequestMethods } from 'n8n-workflow';
 import { NodeApiError, NodeOperationError, jsonParse } from 'n8n-workflow';
 import type Client from 'typesense/lib/Typesense/Client';
 
@@ -288,7 +288,7 @@ export class AnalyticsResource extends BaseTypesenseResource {
   private async makeAnalyticsRequest(
     context: IExecuteFunctions,
     credentials: TypesenseCredentials,
-    method: string,
+    method: IHttpRequestMethods,
     endpoint: string,
     body?: IDataObject | IDataObject[],
     queryParams?: Record<string, string>,
@@ -308,7 +308,7 @@ export class AnalyticsResource extends BaseTypesenseResource {
       }
     }
 
-    const options: IDataObject = {
+    const options: IHttpRequestOptions = {
       method,
       url,
       headers: {
@@ -318,11 +318,29 @@ export class AnalyticsResource extends BaseTypesenseResource {
     };
 
     if (body) {
-      options.body = body;
+      options.body = body as IDataObject;
       options.json = true;
     }
 
-    return (await context.helpers.request(options)) as IDataObject | IDataObject[];
+    try {
+      return (await context.helpers.httpRequest(options)) as IDataObject | IDataObject[];
+    } catch (error) {
+      const shapedError = error as { statusCode?: number; status?: number; httpCode?: number };
+      const status = shapedError?.statusCode ?? shapedError?.status ?? shapedError?.httpCode;
+
+      // Provide a clearer message when Analytics is not enabled on the server
+      if (status === 404 && endpoint.startsWith('/analytics/')) {
+        const baseUrlForMsg = this.getBaseUrl(credentials);
+        throw new NodeOperationError(
+          context.getNode(),
+          `Analytics API returned 404. This usually means Analytics is disabled on the Typesense server. ` +
+            `Start Typesense with --analytics-dir (v27.1+) or set TS_ANALYTICS_DIR. ` +
+            `Endpoint: ${method.toUpperCase()} ${endpoint} at ${baseUrlForMsg}.`,
+        );
+      }
+
+      throw error;
+    }
   }
 
   private async createAnalyticsEvent(

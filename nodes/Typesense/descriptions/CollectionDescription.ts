@@ -8,6 +8,8 @@ const fieldTypeOptions = [
   { name: 'Float', value: 'float' },
   { name: 'Bool', value: 'bool' },
   { name: 'Geo Point', value: 'geopoint' },
+  { name: 'Geo Point Array', value: 'geopoint[]' },
+  { name: 'Geo Polygon', value: 'geopolygon' },
   { name: 'String Array', value: 'string[]' },
   { name: 'Int 32 Array', value: 'int32[]' },
   { name: 'Float Array', value: 'float[]' },
@@ -68,7 +70,10 @@ export const collectionFields: INodeProperties[] = [
   {
     displayName: 'Collection Name',
     name: 'collectionId',
-    type: 'string',
+    type: 'options',
+    typeOptions: {
+      loadOptionsMethod: 'getCollections',
+    },
     default: '',
     required: true,
     displayOptions: {
@@ -77,7 +82,7 @@ export const collectionFields: INodeProperties[] = [
         operation: ['delete', 'get', 'update'],
       },
     },
-    description: 'Name of the collection to operate on',
+    description: 'Select a collection from your Typesense instance',
   },
   {
     displayName: 'JSON Parameters',
@@ -293,7 +298,11 @@ export const collectionFields: INodeProperties[] = [
       {
         displayName: 'Default Sorting Field',
         name: 'defaultSortingField',
-        type: 'string',
+        type: 'options',
+        typeOptions: {
+          loadOptionsMethod: 'getFieldNames',
+          loadOptionsDependsOn: ['schemaParameters.name'],
+        },
         default: '',
         description: 'Field to use for default sorting operations',
       },
@@ -311,33 +320,16 @@ export const collectionFields: INodeProperties[] = [
         default: '',
         description: 'Comma-separated list of symbols to include in the index',
       },
-        {
-          displayName: 'Metadata (JSON)',
-          name: 'metadataJson',
-          type: 'string',
-          typeOptions: {
-            rows: 3,
+          {
+            displayName: 'Metadata (JSON)',
+            name: 'metadataJson',
+            type: 'string',
+            typeOptions: {
+              rows: 3,
+            },
+            default: '',
+            description: 'Optional metadata to store with the collection schema',
           },
-          default: '',
-          description: 'Optional metadata to store with the collection schema',
-        },
-        {
-          displayName: 'Synonym Sets',
-          name: 'synonymSets',
-          type: 'string',
-          default: '',
-          description: 'Comma-separated list of synonym set names to associate with this collection',
-        },
-        {
-          displayName: 'Voice Query Model (JSON)',
-          name: 'voiceQueryModelJson',
-          type: 'string',
-          typeOptions: {
-            rows: 4,
-          },
-          default: '',
-          description: 'Voice query model configuration as JSON',
-        },
     ],
   },
   {
@@ -457,7 +449,11 @@ export const collectionFields: INodeProperties[] = [
       {
         displayName: 'Default Sorting Field',
         name: 'defaultSortingField',
-        type: 'string',
+        type: 'options',
+        typeOptions: {
+          loadOptionsMethod: 'getFieldNames',
+          loadOptionsDependsOn: ['collectionId'],
+        },
         default: '',
       },
       {

@@ -65,7 +65,10 @@ export const aliasFields: INodeProperties[] = [
   {
     displayName: 'Collection Name',
     name: 'collectionName',
-    type: 'string',
+    type: 'options',
+    typeOptions: {
+      loadOptionsMethod: 'getCollections',
+    },
     default: '',
     required: true,
     displayOptions: {
@@ -74,7 +77,7 @@ export const aliasFields: INodeProperties[] = [
         operation: ['create', 'update'],
       },
     },
-    description: 'Name of the collection the alias should point to',
+    description: 'Select a collection from your Typesense instance',
   },
   {
     displayName: 'Return All',

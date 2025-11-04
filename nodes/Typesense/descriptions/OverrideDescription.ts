@@ -45,7 +45,10 @@ export const overrideFields: INodeProperties[] = [
   {
     displayName: 'Collection Name',
     name: 'collection',
-    type: 'string',
+    type: 'options',
+    typeOptions: {
+      loadOptionsMethod: 'getCollections',
+    },
     default: '',
     required: true,
     displayOptions: {
@@ -54,7 +57,7 @@ export const overrideFields: INodeProperties[] = [
         operation: ['create', 'delete', 'get', 'getAll'],
       },
     },
-    description: 'Name of the collection',
+    description: 'Select a collection from your Typesense instance',
   },
   {
     displayName: 'Override ID',
