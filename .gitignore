@@ -1,3 +1,5 @@
+# Ignore Cursor rules file
+.cursorules
 # Dependencies
 node_modules/
 npm-debug.log*
