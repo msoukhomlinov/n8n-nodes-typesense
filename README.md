@@ -27,14 +27,27 @@ An [n8n](https://n8n.io) community node that integrates with [Typesense](https:/
 
 ## Installation
 
-1. Clone this repository locally or add it to your n8n instance as a custom community node.
-2. From the repository directory, install dependencies and build the project:
+### Via npm (recommended)
+
+Install the published package into your n8n instance:
+
+```bash
+npm install n8n-nodes-typesense
+```
+
+Restart n8n so it loads the new node.
+
+### From source (for development/contribution)
+
+1. Clone this repository and install dependencies:
    ```bash
    npm install
+   ```
+2. Build the project:
+   ```bash
    npm run build
    ```
-3. Copy the generated `dist` directory (or publish the package) to your n8n community nodes folder.
-4. Restart n8n so it loads the new node.
+3. Link or copy the generated `dist` to your n8n community nodes folder and restart n8n.
 
 ## Credentials
 

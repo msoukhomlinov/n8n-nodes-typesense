@@ -2,9 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
-
-## [0.1.0] - 2025-09-22
+## [1.0.0] - 2025-11-04
 
 ### Added
 - **Collection Resource**: Full CRUD operations for managing Typesense collections

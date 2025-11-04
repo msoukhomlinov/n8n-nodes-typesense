@@ -8,7 +8,10 @@
     "typesense"
   ],
   "license": "MIT",
-  "author": "Max Soukhomlinov",
+  "author": {
+    "name": "Max Soukhomlinov",
+    "url": "https://github.com/msoukhomlinov"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/msoukhomlinov/n8n-nodes-typesense.git"
@@ -18,6 +21,15 @@
   "files": [
     "dist"
   ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/TypesenseApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/Typesense/Typesense.node.js"
+    ]
+  },
   "scripts": {
     "build": "tsc && npm run copy:assets",
     "lint": "eslint .",
