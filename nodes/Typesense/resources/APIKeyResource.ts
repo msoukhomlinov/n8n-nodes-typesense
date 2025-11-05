@@ -349,7 +349,9 @@ export class APIKeyResource extends BaseTypesenseResource {
   ): Promise<IDataObject> {
     const apiKeyId = this.validateRequired(context, 'apiKeyId', itemIndex);
     const response = await client.keys(apiKeyId).retrieve();
-    return response as IDataObject;
+    const result = response as IDataObject;
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    return this.filterColumns(result, filterColumns) as IDataObject;
   }
 
   private async getAllAPIKeys(
@@ -377,11 +379,15 @@ export class APIKeyResource extends BaseTypesenseResource {
       );
     }
 
+    let result: IDataObject[];
     if (returnAll) {
-      return apiKeys;
+      result = apiKeys;
+    } else {
+      result = apiKeys.slice(0, limit);
     }
 
-    return apiKeys.slice(0, limit);
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    return this.filterColumns(result, filterColumns) as IDataObject[];
   }
 
   private async updateAPIKey(

@@ -134,4 +134,44 @@ export abstract class BaseTypesenseResource implements ITypesenseResource {
   ): IDataObject {
     return context.getNodeParameter(parameterName, itemIndex, defaultValue) as IDataObject;
   }
+
+  /**
+   * Helper method to filter columns from result objects
+   * @param result - The result object or array to filter
+   * @param filterColumns - Comma-separated list of column names to include
+   * @returns Filtered result with only specified columns
+   */
+  protected filterColumns(
+    result: IDataObject | IDataObject[],
+    filterColumns: string | undefined,
+  ): IDataObject | IDataObject[] {
+    if (!filterColumns || filterColumns.trim() === '') {
+      return result;
+    }
+
+    const columns = filterColumns
+      .split(',')
+      .map((col) => col.trim())
+      .filter((col) => col.length > 0);
+
+    if (columns.length === 0) {
+      return result;
+    }
+
+    const filterObject = (obj: IDataObject): IDataObject => {
+      const filtered: IDataObject = {};
+      for (const col of columns) {
+        if (col in obj) {
+          filtered[col] = obj[col];
+        }
+      }
+      return filtered;
+    };
+
+    if (Array.isArray(result)) {
+      return result.map((item) => filterObject(item));
+    } else {
+      return filterObject(result);
+    }
+  }
 }

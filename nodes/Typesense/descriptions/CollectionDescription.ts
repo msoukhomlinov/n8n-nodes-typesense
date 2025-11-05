@@ -523,6 +523,19 @@ export const collectionFields: INodeProperties[] = [
     description: 'Comma-separated list of fields to exclude from the response',
   },
   {
+    displayName: 'Filter Columns',
+    name: 'filterColumns',
+    type: 'string',
+    default: '',
+    displayOptions: {
+      show: {
+        resource: ['collection'],
+        operation: ['get', 'getAll'],
+      },
+    },
+    description: 'Comma-separated list of column names to include in the output. Leave empty to return all columns.',
+  },
+  {
     displayName: 'Offset',
     name: 'offset',
     type: 'number',

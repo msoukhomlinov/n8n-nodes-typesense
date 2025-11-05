@@ -206,7 +206,9 @@ export class AliasResource extends BaseTypesenseResource {
   ): Promise<IDataObject> {
     const aliasName = this.validateRequired(context, 'aliasName', itemIndex);
     const response = await client.aliases(aliasName).retrieve();
-    return response as IDataObject;
+    const result = response as IDataObject;
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    return this.filterColumns(result, filterColumns) as IDataObject;
   }
 
   private async getAllAliases(
@@ -235,11 +237,15 @@ export class AliasResource extends BaseTypesenseResource {
         );
       }
 
+      let result: IDataObject[];
       if (returnAll) {
-        return aliases;
+        result = aliases;
+      } else {
+        result = aliases.slice(0, limit);
       }
 
-      return aliases.slice(0, limit);
+      const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+      return this.filterColumns(result, filterColumns) as IDataObject[];
     } catch (error) {
       // If aliases API is not available, return empty array
       // This maintains compatibility with older Typesense versions

@@ -134,4 +134,17 @@ export const apiKeyFields: INodeProperties[] = [
     },
     description: 'Maximum number of API keys to retrieve',
   },
+  {
+    displayName: 'Filter Columns',
+    name: 'filterColumns',
+    type: 'string',
+    default: '',
+    displayOptions: {
+      show: {
+        resource: ['apiKey'],
+        operation: ['get', 'getAll'],
+      },
+    },
+    description: 'Comma-separated list of column names to include in the output. Leave empty to return all columns.',
+  },
 ];

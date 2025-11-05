@@ -330,6 +330,19 @@ export class OverrideResource extends BaseTypesenseResource {
         },
         description: 'Maximum number of overrides to retrieve',
       },
+      {
+        displayName: 'Filter Columns',
+        name: 'filterColumns',
+        type: 'string',
+        default: '',
+        displayOptions: {
+          show: {
+            resource: ['override'],
+            operation: ['get', 'getAll'],
+          },
+        },
+        description: 'Comma-separated list of column names to include in the output. Leave empty to return all columns.',
+      },
     ];
   }
 
@@ -485,7 +498,9 @@ export class OverrideResource extends BaseTypesenseResource {
     const overrideId = this.validateRequired(context, 'overrideId', itemIndex);
 
     const response = await client.collections(collection).overrides(overrideId).retrieve();
-    return response as unknown as IDataObject;
+    const result = response as unknown as IDataObject;
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    return this.filterColumns(result, filterColumns) as IDataObject;
   }
 
   private async getAllOverrides(
@@ -502,11 +517,15 @@ export class OverrideResource extends BaseTypesenseResource {
     // API returns { overrides: [...] }
     const overrides = (response as unknown as IDataObject).overrides as IDataObject[] || [];
 
+    let result: IDataObject[];
     if (returnAll) {
-      return overrides;
+      result = overrides;
+    } else {
+      result = overrides.slice(0, limit);
     }
 
-    return overrides.slice(0, limit);
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    return this.filterColumns(result, filterColumns) as IDataObject[];
   }
 }
 

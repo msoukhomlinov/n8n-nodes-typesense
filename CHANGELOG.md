@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2025-01-27
+
+### Added
+- **Column Filtering**: Added "Filter Columns" field to all `get` and `getAll` operations across all resources
+  - Accepts comma-separated list of column names to include in output
+  - Post-processing filter applied after API response
+  - Available for: Document, Collection, Override, Synonym, Conversation, APIKey, and Alias resources
+
 ## [1.1.0] - 2025-11-05
 
 ### Changed

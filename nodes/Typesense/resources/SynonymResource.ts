@@ -180,7 +180,9 @@ export class SynonymResource extends BaseTypesenseResource {
     const collection = this.validateRequired(context, 'collection', itemIndex);
     const synonymSetName = this.validateRequired(context, 'synonymSetName', itemIndex);
     const response = await client.collections(collection).synonyms(synonymSetName).retrieve();
-    return response as unknown as IDataObject;
+    const result = response as unknown as IDataObject;
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    return this.filterColumns(result, filterColumns) as IDataObject;
   }
 
   private async getAllSynonymSets(
@@ -197,10 +199,14 @@ export class SynonymResource extends BaseTypesenseResource {
     // API returns { synonyms: [...] }
     const synonymSets = (response as unknown as IDataObject).synonyms as IDataObject[] || [];
 
+    let result: IDataObject[];
     if (returnAll) {
-      return synonymSets;
+      result = synonymSets;
+    } else {
+      result = synonymSets.slice(0, limit);
     }
 
-    return synonymSets.slice(0, limit);
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    return this.filterColumns(result, filterColumns) as IDataObject[];
   }
 }

@@ -230,5 +230,18 @@ export const conversationFields: INodeProperties[] = [
     },
     description: 'Maximum number of models to retrieve',
   },
+  {
+    displayName: 'Filter Columns',
+    name: 'filterColumns',
+    type: 'string',
+    default: '',
+    displayOptions: {
+      show: {
+        resource: ['conversation'],
+        operation: ['get', 'getAll'],
+      },
+    },
+    description: 'Comma-separated list of column names to include in the output. Leave empty to return all columns.',
+  },
 ];
 

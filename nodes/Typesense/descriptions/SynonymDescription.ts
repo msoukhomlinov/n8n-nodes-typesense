@@ -208,4 +208,17 @@ export const synonymFields: INodeProperties[] = [
     },
     description: 'Maximum number of synonym sets to retrieve',
   },
+  {
+    displayName: 'Filter Columns',
+    name: 'filterColumns',
+    type: 'string',
+    default: '',
+    displayOptions: {
+      show: {
+        resource: ['synonym'],
+        operation: ['get', 'getAll'],
+      },
+    },
+    description: 'Comma-separated list of column names to include in the output. Leave empty to return all columns.',
+  },
 ];

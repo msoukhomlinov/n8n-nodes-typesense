@@ -323,6 +323,19 @@ export const documentFields: INodeProperties[] = [
     description: 'Fields to exclude from results',
   },
   {
+    displayName: 'Filter Columns',
+    name: 'filterColumns',
+    type: 'string',
+    default: '',
+    displayOptions: {
+      show: {
+        resource: ['document'],
+        operation: ['get', 'getAll'],
+      },
+    },
+    description: 'Comma-separated list of column names to include in the output. Leave empty to return all columns.',
+  },
+  {
     displayName: 'Documents Data (JSONL)',
     name: 'documentsJsonl',
     type: 'string',

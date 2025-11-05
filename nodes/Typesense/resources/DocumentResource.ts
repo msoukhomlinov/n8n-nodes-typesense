@@ -446,7 +446,9 @@ export class DocumentResource extends BaseTypesenseResource {
     const documentId = this.validateRequired(context, 'documentId', itemIndex);
 
     const response = await client.collections(collection).documents(documentId).retrieve();
-    return response as IDataObject;
+    const result = response as IDataObject;
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    return this.filterColumns(result, filterColumns) as IDataObject;
   }
 
   private async getAllDocuments(
@@ -481,12 +483,16 @@ export class DocumentResource extends BaseTypesenseResource {
     const searchResponse = response as unknown as IDataObject;
     const hits = ((searchResponse.hits as unknown) as IDataObject[]) || [];
 
+    let documents: IDataObject[];
     if (!returnAll) {
       const limit = this.getNumber(context, 'limit', itemIndex, 50);
-      return hits.slice(0, limit).map((hit: IDataObject) => hit.document as IDataObject);
+      documents = hits.slice(0, limit).map((hit: IDataObject) => hit.document as IDataObject);
+    } else {
+      documents = hits.map((hit: IDataObject) => hit.document as IDataObject);
     }
 
-    return hits.map((hit: IDataObject) => hit.document as IDataObject);
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    return this.filterColumns(documents, filterColumns) as IDataObject[];
   }
 
   private async updateDocument(

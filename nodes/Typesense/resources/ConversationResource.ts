@@ -344,7 +344,9 @@ export class ConversationResource extends BaseTypesenseResource {
   ): Promise<IDataObject> {
     const modelId = this.validateRequired(context, 'modelId', itemIndex);
     const response = await client.conversations().models(modelId).retrieve();
-    return response as IDataObject;
+    const result = response as IDataObject;
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    return this.filterColumns(result, filterColumns) as IDataObject;
   }
 
   private async getAllModels(
@@ -360,11 +362,15 @@ export class ConversationResource extends BaseTypesenseResource {
     // API returns an array directly
     const models = Array.isArray(response) ? response : [response];
 
+    let result: IDataObject[];
     if (returnAll) {
-      return models as IDataObject[];
+      result = models as IDataObject[];
+    } else {
+      result = models.slice(0, limit) as IDataObject[];
     }
 
-    return models.slice(0, limit) as IDataObject[];
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    return this.filterColumns(result, filterColumns) as IDataObject[];
   }
 
   private async updateModel(
