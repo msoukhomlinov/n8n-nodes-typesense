@@ -499,7 +499,7 @@ export class OverrideResource extends BaseTypesenseResource {
 
     const response = await client.collections(collection).overrides(overrideId).retrieve();
     const result = response as unknown as IDataObject;
-    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex, '') as string;
     return this.filterColumns(result, filterColumns) as IDataObject;
   }
 
@@ -524,7 +524,7 @@ export class OverrideResource extends BaseTypesenseResource {
       result = overrides.slice(0, limit);
     }
 
-    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex, '') as string;
     return this.filterColumns(result, filterColumns) as IDataObject[];
   }
 }

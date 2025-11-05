@@ -156,7 +156,7 @@ export class CollectionResource extends BaseTypesenseResource {
     const collectionId = this.validateRequired(context, 'collectionId', itemIndex);
     const response = await client.collections(collectionId).retrieve();
     const result = response as IDataObject;
-    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex, '') as string;
     return this.filterColumns(result, filterColumns) as IDataObject;
   }
 
@@ -201,7 +201,7 @@ export class CollectionResource extends BaseTypesenseResource {
       );
     }
 
-    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex, '') as string;
     return this.filterColumns(allCollections, filterColumns) as IDataObject[];
   }
 

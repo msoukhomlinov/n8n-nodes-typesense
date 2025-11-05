@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2025-01-27
+
+### Fixed
+- Fixed linting errors in ConversationResource (removed unused error variables, added proper type suppressions)
+
 ## [1.2.0] - 2025-01-27
 
 ### Added

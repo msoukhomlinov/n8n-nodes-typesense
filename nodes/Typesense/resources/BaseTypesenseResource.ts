@@ -143,31 +143,36 @@ export abstract class BaseTypesenseResource implements ITypesenseResource {
    */
   protected filterColumns(
     result: IDataObject | IDataObject[],
-    filterColumns: string | undefined,
+    filterColumns: string,
   ): IDataObject | IDataObject[] {
+    // Early return if no filter specified
     if (!filterColumns || filterColumns.trim() === '') {
       return result;
     }
 
+    // Parse the comma-separated column names
     const columns = filterColumns
       .split(',')
       .map((col) => col.trim())
       .filter((col) => col.length > 0);
 
+    // If no valid columns after parsing, return original result
     if (columns.length === 0) {
       return result;
     }
 
+    // Function to filter a single object
     const filterObject = (obj: IDataObject): IDataObject => {
       const filtered: IDataObject = {};
       for (const col of columns) {
-        if (col in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, col)) {
           filtered[col] = obj[col];
         }
       }
       return filtered;
     };
 
+    // Apply filtering to array or single object
     if (Array.isArray(result)) {
       return result.map((item) => filterObject(item));
     } else {

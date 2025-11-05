@@ -350,7 +350,7 @@ export class APIKeyResource extends BaseTypesenseResource {
     const apiKeyId = this.validateRequired(context, 'apiKeyId', itemIndex);
     const response = await client.keys(apiKeyId).retrieve();
     const result = response as IDataObject;
-    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex, '') as string;
     return this.filterColumns(result, filterColumns) as IDataObject;
   }
 
@@ -386,7 +386,7 @@ export class APIKeyResource extends BaseTypesenseResource {
       result = apiKeys.slice(0, limit);
     }
 
-    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex, '') as string;
     return this.filterColumns(result, filterColumns) as IDataObject[];
   }
 

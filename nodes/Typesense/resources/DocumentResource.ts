@@ -447,7 +447,7 @@ export class DocumentResource extends BaseTypesenseResource {
 
     const response = await client.collections(collection).documents(documentId).retrieve();
     const result = response as IDataObject;
-    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex, '') as string;
     return this.filterColumns(result, filterColumns) as IDataObject;
   }
 
@@ -491,7 +491,7 @@ export class DocumentResource extends BaseTypesenseResource {
       documents = hits.map((hit: IDataObject) => hit.document as IDataObject);
     }
 
-    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex, '') as string;
     return this.filterColumns(documents, filterColumns) as IDataObject[];
   }
 

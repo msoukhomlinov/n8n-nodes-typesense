@@ -1,4 +1,4 @@
-import type { IDataObject, IExecuteFunctions, INodeProperties } from 'n8n-workflow';
+import type { IDataObject, IExecuteFunctions, INodeProperties, JsonObject } from 'n8n-workflow';
 import { NodeApiError, NodeOperationError, jsonParse } from 'n8n-workflow';
 
 import { BaseTypesenseResource } from './BaseTypesenseResource';
@@ -280,12 +280,13 @@ export class ConversationResource extends BaseTypesenseResource {
       if (context.continueOnFail()) {
         return { error: (error as Error).message };
       }
-      throw new NodeApiError(context.getNode(), error as any, { itemIndex });
+      throw new NodeApiError(context.getNode(), error as JsonObject, { itemIndex });
     }
   }
 
   private async createModel(
     context: IExecuteFunctions,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     client: any,
     itemIndex: number,
   ): Promise<IDataObject> {
@@ -297,7 +298,7 @@ export class ConversationResource extends BaseTypesenseResource {
       const modelJson = this.validateRequired(context, 'modelJson', itemIndex);
       try {
         modelData = jsonParse<IDataObject>(modelJson);
-      } catch (error) {
+      } catch {
         throw new NodeOperationError(context.getNode(), 'Model JSON must be valid JSON.', {
           itemIndex,
         });
@@ -329,6 +330,7 @@ export class ConversationResource extends BaseTypesenseResource {
 
   private async deleteModel(
     context: IExecuteFunctions,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     client: any,
     itemIndex: number,
   ): Promise<IDataObject> {
@@ -339,18 +341,20 @@ export class ConversationResource extends BaseTypesenseResource {
 
   private async getModel(
     context: IExecuteFunctions,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     client: any,
     itemIndex: number,
   ): Promise<IDataObject> {
     const modelId = this.validateRequired(context, 'modelId', itemIndex);
     const response = await client.conversations().models(modelId).retrieve();
     const result = response as IDataObject;
-    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex, '') as string;
     return this.filterColumns(result, filterColumns) as IDataObject;
   }
 
   private async getAllModels(
     context: IExecuteFunctions,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     client: any,
     itemIndex: number,
   ): Promise<IDataObject[]> {
@@ -358,7 +362,7 @@ export class ConversationResource extends BaseTypesenseResource {
     const limit = this.getNumber(context, 'limit', itemIndex, 50);
 
     const response = await client.conversations().models().retrieve();
-    
+
     // API returns an array directly
     const models = Array.isArray(response) ? response : [response];
 
@@ -369,12 +373,13 @@ export class ConversationResource extends BaseTypesenseResource {
       result = models.slice(0, limit) as IDataObject[];
     }
 
-    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex, '') as string;
     return this.filterColumns(result, filterColumns) as IDataObject[];
   }
 
   private async updateModel(
     context: IExecuteFunctions,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     client: any,
     itemIndex: number,
   ): Promise<IDataObject> {
@@ -387,7 +392,7 @@ export class ConversationResource extends BaseTypesenseResource {
       const modelJson = this.validateRequired(context, 'modelJson', itemIndex);
       try {
         modelData = jsonParse<IDataObject>(modelJson);
-      } catch (error) {
+      } catch {
         throw new NodeOperationError(context.getNode(), 'Model JSON must be valid JSON.', {
           itemIndex,
         });

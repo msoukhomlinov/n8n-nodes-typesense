@@ -207,7 +207,7 @@ export class AliasResource extends BaseTypesenseResource {
     const aliasName = this.validateRequired(context, 'aliasName', itemIndex);
     const response = await client.aliases(aliasName).retrieve();
     const result = response as IDataObject;
-    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+    const filterColumns = this.getOptional(context, 'filterColumns', itemIndex, '') as string;
     return this.filterColumns(result, filterColumns) as IDataObject;
   }
 
@@ -244,7 +244,7 @@ export class AliasResource extends BaseTypesenseResource {
         result = aliases.slice(0, limit);
       }
 
-      const filterColumns = this.getOptional(context, 'filterColumns', itemIndex) as string | undefined;
+      const filterColumns = this.getOptional(context, 'filterColumns', itemIndex, '') as string;
       return this.filterColumns(result, filterColumns) as IDataObject[];
     } catch (error) {
       // If aliases API is not available, return empty array
